@@ -27,20 +27,20 @@ type DailyOpeningTimes struct {
 }
 
 type PetrolFillingStation struct {
-	NodeId                     string     `json:"node_id"`
-	MftOrganisationName        string     `json:"mft_organisation_name"`
-	PublicPhoneNumber          string     `json:"public_phone_number"`
-	TradingName                string     `json:"trading_name"`
-	IsSameTradingAndBrandName  bool       `json:"is_same_trading_and_brand_name"`
-	BrandName                  string     `json:"brand_name"`
-	TemporaryClosure           bool       `json:"temporary_closure"`
-	PermanentClosure           bool       `json:"permanent_closure"`
-	PermanentClosureDate       *time.Time `json:"permanent_closure_date"`
-	IsMotorwayServiceStation   bool       `json:"is_motorway_service_station"`
-	IsSupermaketServiceStation bool       `json:"is_supermarket_service_station"`
-	Location                   Location   `json:"location"`
-	Amenities                  []string   `json:"amenities"`
-	OpeningTimes               struct {
+	NodeId                      string     `json:"node_id"`
+	MftOrganisationName         string     `json:"mft_organisation_name"`
+	PublicPhoneNumber           string     `json:"public_phone_number"`
+	TradingName                 string     `json:"trading_name"`
+	IsSameTradingAndBrandName   bool       `json:"is_same_trading_and_brand_name"`
+	BrandName                   string     `json:"brand_name"`
+	TemporaryClosure            bool       `json:"temporary_closure"`
+	PermanentClosure            bool       `json:"permanent_closure"`
+	PermanentClosureDate        *time.Time `json:"permanent_closure_date"`
+	IsMotorwayServiceStation    bool       `json:"is_motorway_service_station"`
+	IsSupermarketServiceStation bool       `json:"is_supermarket_service_station"`
+	Location                    Location   `json:"location"`
+	Amenities                   []string   `json:"amenities"`
+	OpeningTimes                struct {
 		UsualDays   map[string]DailyOpeningTimes `json:"usual_days"`
 		BankHoliday struct {
 			Type      string `json:"type"`
@@ -91,7 +91,7 @@ func (pfs *PetrolFillingStation) ToTuple() []any {
 		pfs.PermanentClosure,
 		pfs.PermanentClosureDate,
 		pfs.IsMotorwayServiceStation,
-		pfs.IsSupermaketServiceStation,
+		pfs.IsSupermarketServiceStation,
 		pfs.Location.AddressLine1,
 		pfs.Location.AddressLine2,
 		pfs.Location.City,

@@ -142,7 +142,7 @@ func (repo *sqliteRepository) Search(boundingBox []float64) ([]models.SearchResu
 			&result.NodeId, &result.MftOrganisationName, &result.PublicPhoneNumber, &result.TradingName,
 			&result.IsSameTradingAndBrandName, &result.BrandName, &result.TemporaryClosure,
 			&result.PermanentClosure, &result.PermanentClosureDate, &result.IsMotorwayServiceStation,
-			&result.IsSupermaketServiceStation,
+			&result.IsSupermarketServiceStation,
 			&result.Location.AddressLine1, &result.Location.AddressLine2, &result.Location.City, &result.Location.Country,
 			&result.Location.County, &result.Location.Postcode, &result.Location.Latitude, &result.Location.Longitude,
 			&openingTimesJSON, &amenitiesJSON, &fuelTypesJSON,

@@ -50,12 +50,6 @@ func main() {
 		}
 	}()
 
-	err = internal.CreateDB(db)
-	if err != nil {
-		fmt.Printf("Database creation failed: %v\n", err)
-		return
-	}
-
 	repo := internal.NewFuelPricesRepository(db)
 
 	// numPFS, err := client.GetFillingStations(func(stations []models.PetrolFillingStation) error {
