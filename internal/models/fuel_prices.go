@@ -4,6 +4,7 @@ import (
 	// "encoding/json"
 	"log"
 	"time"
+
 	jsoniter "github.com/json-iterator/go"
 )
 
@@ -66,16 +67,18 @@ type ForecourtPrices struct {
 	FuelPrices          []FuelPrice `json:"fuel_prices"`
 }
 
+type MetaData struct {
+	BatchNumber  int  `json:"batch_number"`
+	BatchSize    int  `json:"batch_size"`
+	TotalBatches int  `json:"total_batches"`
+	Cached       bool `json:"cached"`
+}
+
 type ForecourtPricesResponse struct {
 	Success  bool              `json:"success"`
 	Data     []ForecourtPrices `json:"data"`
 	Message  string            `json:"message,omitempty"`
-	MetaData struct {
-		BatchNumber  int  `json:"batch_number"`
-		BatchSize    int  `json:"batch_size"`
-		TotalBatches int  `json:"total_batches"`
-		Cached       bool `json:"cached"`
-	} `json:"metadata"`
+	MetaData MetaData          `json:"metadata"`
 }
 
 func (pfs *PetrolFillingStation) ToTuple() []any {

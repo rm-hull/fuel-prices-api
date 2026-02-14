@@ -22,11 +22,10 @@ func main() {
 	clientId := os.Getenv("CLIENT_ID")
 	clientSecret := os.Getenv("CLIENT_SECRET")
 
-	client := internal.NewFuelPricesClient(clientId, clientSecret)
+	client, err := internal.NewFuelPricesClient(clientId, clientSecret)
 
-	if err := client.Authenticate(); err != nil {
-		fmt.Printf("Authentication failed: %v\n", err)
-		return
+	if err != nil {
+		log.Fatalf("Authentication failed: %v\n", err)
 	}
 
 	// Example usage of GetAllFuelPrices
