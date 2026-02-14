@@ -7,10 +7,10 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/rm-hull/fuel-prices-api/internal"
+	"github.com/rm-hull/fuel-prices-api/internal/models"
 
 	_ "github.com/mattn/go-sqlite3"
 )
-
 
 func main() {
 
@@ -60,15 +60,15 @@ func main() {
 	// }
 	// log.Printf("Inserted %d PFS", numPFS)
 
-	// numPrices, err := client.GetAllFuelPrices(func(prices []models.ForecourtPrices) error {
-	// 	return repo.InsertPrices(prices)
-	// })
-	// if err != nil {
-	// 	fmt.Printf("Error fetching fuel prices: %v\n", err)
-	// }
-	// log.Printf("Inserted %d price records", numPrices)
+	numPrices, err := client.GetAllFuelPrices(func(prices []models.ForecourtPrices) error {
+		return repo.InsertPrices(prices)
+	})
+	if err != nil {
+		fmt.Printf("Error fetching fuel prices: %v\n", err)
+	}
+	log.Printf("Inserted %d price records", numPrices)
 
-	results, err := repo.Search([]float64{-1.6237449645996096, 53.945882632598945, -1.4258193969726562, 54.03288059902232})
+	results, err := repo.SearchPrices([]float64{-1.6237449645996096, 53.945882632598945, -1.4258193969726562, 54.03288059902232})
 	if err != nil {
 		fmt.Printf("Error searching: %v\n", err)
 		return

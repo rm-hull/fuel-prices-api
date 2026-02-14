@@ -86,9 +86,6 @@ func (mgr *fuelPricesManager) GetAllFuelPrices(callback func([]models.ForecourtP
 		var resp models.ForecourtPricesResponse
 		decoder := json.NewDecoder(body)
 		if err := decoder.Decode(&resp); err != nil {
-			// print the body for debugging
-			bodyBytes, _ := io.ReadAll(body)
-			log.Printf("Response body: %s", string(bodyBytes))
 			return 0, fmt.Errorf("failed to unmarshal response: %w", err)
 		}
 		if !resp.Success {

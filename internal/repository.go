@@ -26,7 +26,9 @@ type FuelPricesRepository interface {
 	InsertPFS(batch []models.PetrolFillingStation) error
 	InsertPrices(batch []models.ForecourtPrices) error
 	Search(boundingBox []float64) ([]models.SearchResult, error)
+	SearchPrices(boundingBox []float64) (map[string]map[string][]models.PriceInfo, error) // Temporary method to return prices in a more query-friendly format
 }
+
 
 type sqliteRepository struct {
 	db *sql.DB
@@ -163,6 +165,39 @@ func (repo *sqliteRepository) Search(boundingBox []float64) ([]models.SearchResu
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating over rows: %w", err)
+	}
+
+	return results, nil
+}
+
+func (repo *sqliteRepository) SearchPrices(boundingBox []float64) (map[string]map[string][]models.PriceInfo, error) {
+
+	rows, err := repo.db.Query(searchPricesSQL, boundingBox[1], boundingBox[3], boundingBox[0], boundingBox[2])
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute search query: %w", err)
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Printf("failed to close rows: %v", err)
+		}
+	}()
+
+	results := make(map[string]map[string][]models.PriceInfo)
+
+	for rows.Next() {
+		var nodeId string
+		var fuelPrice models.FuelPrice
+		if err := rows.Scan(&nodeId, &fuelPrice.FuelType, &fuelPrice.PriceLastUpdated, &fuelPrice.Price); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		if _, exists := results[nodeId]; !exists {
+			results[nodeId] = make(map[string][]models.PriceInfo)
+		}
+
+		results[nodeId][fuelPrice.FuelType] = append(results[nodeId][fuelPrice.FuelType], models.PriceInfo{
+			Price:     fuelPrice.Price,
+			UpdatedOn: fuelPrice.PriceLastUpdated,
+		})
 	}
 
 	return results, nil

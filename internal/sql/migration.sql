@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS fuel_prices (
     price_last_updated TIMESTAMP NOT NULL,
     price REAL NOT NULL,
     recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (node_id, fuel_type, recorded_at),
+    PRIMARY KEY (node_id, fuel_type, price_last_updated),
     FOREIGN KEY (node_id) REFERENCES petrol_filling_stations(node_id) ON DELETE CASCADE
 );
 
