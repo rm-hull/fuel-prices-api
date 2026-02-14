@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS petrol_filling_stations (
     brand_name TEXT,
     temporary_closure BOOLEAN NOT NULL DEFAULT 0,
     permanent_closure BOOLEAN NOT NULL DEFAULT 0,
-    permanent_closure_date TIMESTAMP,
+    permanent_closure_date DATETIME,
     is_motorway_service_station BOOLEAN NOT NULL DEFAULT 0,
     is_supermarket_service_station BOOLEAN NOT NULL DEFAULT 0,
     address_line_1 TEXT,
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS petrol_filling_stations (
     opening_times_json TEXT,
     amenities_json TEXT,
     fuel_types_json TEXT,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_petrol_lat_lng ON petrol_filling_stations(latitude, longitude);
 
@@ -37,9 +37,9 @@ CREATE INDEX IF NOT EXISTS idx_petrol_lat_lng ON petrol_filling_stations(latitud
 CREATE TABLE IF NOT EXISTS fuel_prices (
     node_id TEXT NOT NULL,
     fuel_type TEXT NOT NULL,
-    price_last_updated TIMESTAMP NOT NULL,
+    price_last_updated DATETIME NOT NULL,
     price REAL NOT NULL,
-    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (node_id, fuel_type, price_last_updated),
     FOREIGN KEY (node_id) REFERENCES petrol_filling_stations(node_id) ON DELETE CASCADE
 );

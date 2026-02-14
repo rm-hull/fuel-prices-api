@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	neturl "net/url"
 	"time"
 
 	jsoniter "github.com/json-iterator/go"
@@ -26,17 +27,18 @@ func (e *HTTPStatusError) Error() string {
 	return fmt.Sprintf("http status response from %s: %s", e.URL, e.Status)
 }
 
+type BatchCallback[T any] func([]T) (int, error)
+
 type FuelPricesClient interface {
-	Authenticate() error
-	GetAllFuelPrices(func([]models.ForecourtPrices) error) (int, error)
-	GetFillingStations(func([]models.PetrolFillingStation) error) (int, error)
+	GetFuelPrices(BatchCallback[models.ForecourtPrices]) (int, error)
+	GetFillingStations(BatchCallback[models.PetrolFillingStation]) (int, error)
 }
 
 type timeTracker struct {
 	started         time.Time
 	lastAuth        time.Time
-	lastPfsFetch    *time.Time
-	lastPricesFetch *time.Time
+	lastPfsFetch    time.Time
+	lastPricesFetch time.Time
 }
 
 type fuelPricesManager struct {
@@ -48,7 +50,7 @@ type fuelPricesManager struct {
 	client      *http.Client
 }
 
-func NewFuelPricesClient(clientId, clientSecret string) (*fuelPricesManager, error) {
+func NewFuelPricesClient(clientId, clientSecret string) (FuelPricesClient, error) {
 	mgr := &fuelPricesManager{
 		baseUrl:   "https://www.fuel-finder.service.gov.uk/api/v1",
 		startTime: time.Now(),
@@ -68,6 +70,56 @@ func NewFuelPricesClient(clientId, clientSecret string) (*fuelPricesManager, err
 	}
 
 	return mgr, nil
+}
+
+func (mgr *fuelPricesManager) GetFuelPrices(callback BatchCallback[models.ForecourtPrices]) (int, error) {
+	decode := func(body io.ReadCloser, batchNo int) ([]models.ForecourtPrices, int, error) {
+		bodyBytes, err := io.ReadAll(body)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to read response body: %w", err)
+		}
+
+		var resp models.ForecourtPricesResponse
+		if bodyBytes[0] == '[' {
+			var wtf []models.ForecourtPrices
+			if err := json.Unmarshal(bodyBytes, &wtf); err != nil {
+				return nil, 0, fmt.Errorf("failed to unmarshal response: %w", err)
+			}
+			resp.Success = true
+			resp.Data = wtf
+			resp.MetaData = models.MetaData{
+				TotalBatches: batchNo + 2,
+				BatchNumber:  batchNo,
+				BatchSize:    len(wtf),
+			}
+			log.Printf("WARNING: API returned an array instead of the expected object, treating as a single batch with %d records", len(wtf))
+		} else {
+			if err := json.Unmarshal(bodyBytes, &resp); err != nil {
+				return nil, 0, fmt.Errorf("failed to unmarshal response: %w", err)
+			}
+		}
+
+		if !resp.Success {
+			return nil, 0, fmt.Errorf("API error: %s", resp.Message)
+		}
+
+		return resp.Data, resp.MetaData.TotalBatches, nil
+	}
+
+	return fetchBatched(mgr, "pfs/fuel-prices", &mgr.timeTracker.lastPricesFetch, decode, callback)
+}
+
+func (mgr *fuelPricesManager) GetFillingStations(callback BatchCallback[models.PetrolFillingStation]) (int, error) {
+	decode := func(body io.ReadCloser, batchNo int) ([]models.PetrolFillingStation, int, error) {
+		var resp []models.PetrolFillingStation
+		decoder := json.NewDecoder(body)
+		if err := decoder.Decode(&resp); err != nil {
+			return nil, 0, fmt.Errorf("failed to unmarshal response: %w", err)
+		}
+		return resp, 0, nil // No total batches info available for PFS
+	}
+
+	return fetchBatched(mgr, "pfs", &mgr.timeTracker.lastPfsFetch, decode, callback)
 }
 
 func (mgr *fuelPricesManager) authenticate() error {
@@ -132,130 +184,6 @@ func (mgr *fuelPricesManager) tokenRefresh() error {
 	return nil
 }
 
-func (mgr *fuelPricesManager) GetAllFuelPrices(callback func([]models.ForecourtPrices) error) (int, error) {
-
-	if err := mgr.checkTokenExpiry(); err != nil {
-		return 0, fmt.Errorf("failed to refresh token: %w", err)
-	}
-
-	batchNo := 1
-	count := 0
-
-	startTime := time.Now()
-	effectiveStartTimestamp := ""
-	if mgr.timeTracker.lastPricesFetch != nil {
-		log.Printf("Time since last prices fetch: %s", time.Since(*mgr.timeTracker.lastPricesFetch))
-		effectiveStartTimestamp = mgr.timeTracker.lastPricesFetch.Format(time.RFC3339)[:19]
-	}
-
-	for {
-		url := fmt.Sprintf("%s/pfs/fuel-prices?batch-number=%d", mgr.baseUrl, batchNo)
-		if effectiveStartTimestamp != "" {
-			url += "&effective-start-timestamp=" + effectiveStartTimestamp
-		}
-		body, err := mgr.get(url)
-		if err != nil {
-			return 0, err
-		}
-		defer func() {
-			if err := body.Close(); err != nil {
-				log.Printf("failed to close body: %v", err)
-			}
-		}()
-
-		bodyBytes, err := io.ReadAll(body)
-		if err != nil {
-			return 0, fmt.Errorf("failed to read response body: %w", err)
-		}
-
-		var resp models.ForecourtPricesResponse
-
-		// WTF??!?! .. . handle the case where the API sometimes returns an array instead of the expected object
-		if bodyBytes[0] == '[' {
-			var wtf []models.ForecourtPrices
-			if err := json.Unmarshal(bodyBytes, &wtf); err != nil {
-				return 0, fmt.Errorf("failed to unmarshal response: %w", err)
-			}
-			resp.Success = true
-			resp.Data = wtf
-			resp.MetaData = models.MetaData{
-				TotalBatches: batchNo + 2,
-				BatchNumber:  batchNo,
-				BatchSize:    len(wtf),
-				Cached:       false,
-			}
-			log.Printf("WARNING: API returned an array instead of the expected object, treating as a single batch with %d records", len(wtf))
-
-		} else {
-			if err := json.Unmarshal(bodyBytes, &resp); err != nil {
-				return 0, fmt.Errorf("failed to unmarshal response: %w", err)
-			}
-		}
-
-		if !resp.Success {
-			return 0, fmt.Errorf("API error: %s", resp.Message)
-		}
-
-		if err := callback(resp.Data); err != nil {
-			return 0, fmt.Errorf("callback error: %w", err)
-		}
-		batchNo++
-		count += len(resp.Data)
-
-		if batchNo >= resp.MetaData.TotalBatches {
-			break
-		}
-	}
-
-	mgr.timeTracker.lastPricesFetch = &startTime
-	return count, nil
-}
-
-func (mgr *fuelPricesManager) GetFillingStations(callback func([]models.PetrolFillingStation) error) (int, error) {
-
-	if err := mgr.checkTokenExpiry(); err != nil {
-		return 0, fmt.Errorf("failed to refresh token: %w", err)
-	}
-
-	batchNo := 1
-	count := 0
-	for {
-		url := fmt.Sprintf("%s/pfs?batch-number=%d", mgr.baseUrl, batchNo)
-		body, err := mgr.get(url)
-		if err != nil {
-			var stErr *HTTPStatusError
-			if errors.As(err, &stErr) && stErr.StatusCode == 400 {
-				log.Printf("No more batches available, stopping at batch %d", batchNo-1)
-				break
-			}
-			return 0, err
-		}
-		defer func() {
-			if err := body.Close(); err != nil {
-				log.Printf("failed to close body: %v", err)
-			}
-		}()
-
-		var resp []models.PetrolFillingStation
-		decoder := json.NewDecoder(body)
-		if err := decoder.Decode(&resp); err != nil {
-			return 0, fmt.Errorf("failed to unmarshal response: %w", err)
-		}
-
-		if err := callback(resp); err != nil {
-			return 0, fmt.Errorf("callback error: %w", err)
-		}
-
-		count += len(resp)
-		batchNo++
-
-		if len(resp) == 0 {
-			break
-		}
-	}
-
-	return count, nil
-}
 func (mgr *fuelPricesManager) checkTokenExpiry() error {
 	expiryTime := mgr.timeTracker.lastAuth.Add(time.Duration(mgr.tokenData.ExpiresIn) * time.Second)
 	expiresSoon := time.Until(expiryTime) < 5*time.Minute
@@ -267,6 +195,65 @@ func (mgr *fuelPricesManager) checkTokenExpiry() error {
 		}
 	}
 	return nil
+}
+
+func fetchBatched[T any](
+	mgr *fuelPricesManager,
+	path string,
+	lastFetch *time.Time,
+	decode func(io.ReadCloser, int) ([]T, int, error),
+	callback BatchCallback[T],
+) (int, error) {
+	if err := mgr.checkTokenExpiry(); err != nil {
+		return 0, fmt.Errorf("failed to refresh token: %w", err)
+	}
+
+	batchNo := 1
+	count := 0
+
+	startTime := time.Now()
+	effectiveStartTimestamp := ""
+	if !lastFetch.IsZero() {
+		log.Printf("Time since last fetch for %s: %s", path, time.Since(*lastFetch))
+		effectiveStartTimestamp = lastFetch.Format("2006-01-02 15:04:05") // Not quite RFC3339 ...
+	}
+
+	for {
+		url := fmt.Sprintf("%s/%s?batch-number=%d", mgr.baseUrl, path, batchNo)
+		if effectiveStartTimestamp != "" {
+			url += "&effective-start-timestamp=" + neturl.QueryEscape(effectiveStartTimestamp)
+		}
+		body, err := mgr.get(url)
+		if err != nil {
+			var stErr *HTTPStatusError
+			if errors.As(err, &stErr) && stErr.StatusCode == 400 {
+				log.Printf("No more batches available for %s, stopping at batch %d", path, batchNo-1)
+				break
+			}
+			return 0, err
+		}
+
+		data, totalBatches, err := decode(body, batchNo)
+		if err != nil {
+			_ = body.Close()
+			return 0, err
+		}
+		_ = body.Close()
+
+		numRecords, err := callback(data)
+		if err != nil {
+			return 0, fmt.Errorf("callback error: %w", err)
+		}
+		count += numRecords
+		batchNo++
+
+		if numRecords == 0 || (totalBatches > 0 && batchNo > totalBatches) {
+			break
+		}
+	}
+
+	*lastFetch = startTime
+	return count, nil
 }
 
 func (mgr *fuelPricesManager) get(url string) (io.ReadCloser, error) {

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/rm-hull/fuel-prices-api/internal"
-	"github.com/rm-hull/fuel-prices-api/internal/models"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -19,25 +19,6 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	clientId := os.Getenv("CLIENT_ID")
-	clientSecret := os.Getenv("CLIENT_SECRET")
-
-	client, err := internal.NewFuelPricesClient(clientId, clientSecret)
-
-	if err != nil {
-		log.Fatalf("Authentication failed: %v\n", err)
-	}
-
-	// Example usage of GetAllFuelPrices
-	// _, err := client.GetAllFuelPrices(func(forecourts []models.ForecourtPrices) {
-	// 	for _, fc := range forecourts {
-	// 		for _, fuelPrice := range fc.FuelPrices {
-	// 			fmt.Printf("Node: %s, Fuel Type: %s, Price: %.2f, Last Updated: %s\n",
-	// 				fc.NodeId, fuelPrice.FuelType, fuelPrice.Price, fuelPrice.PriceLastUpdated.Format("2006-01-02 15:04:05"))
-	// 		}
-	// 	}
-	// })
-
 	db, err := internal.Connect("data/fuel_prices.db")
 	if err != nil {
 		fmt.Printf("Database connection failed: %v\n", err)
@@ -48,29 +29,35 @@ func main() {
 			fmt.Printf("Failed to close database: %v\n", err)
 		}
 	}()
-
 	repo := internal.NewFuelPricesRepository(db)
 
-	// numPFS, err := client.GetFillingStations(func(stations []models.PetrolFillingStation) error {
-	// 	return repo.InsertPFS(stations)
-	// })
+	clientId := os.Getenv("CLIENT_ID")
+	clientSecret := os.Getenv("CLIENT_SECRET")
+
+	client, err := internal.NewFuelPricesClient(clientId, clientSecret)
+	if err != nil {
+		log.Fatalf("Authentication failed: %v\n", err)
+	}
+
+	for {
+		numPFS, err := client.GetFillingStations(repo.InsertPFS)
+		if err != nil {
+			log.Fatalf("Error fetching PFS: %v\n", err)
+		}
+		log.Printf("Inserted %d PFS", numPFS)
+
+		numPrices, err := client.GetFuelPrices(repo.InsertPrices)
+		if err != nil {
+			log.Fatalf("Error fetching fuel prices: %v\n", err)
+		}
+		log.Printf("Inserted %d price records", numPrices)
+
+		time.Sleep(3 * time.Minute)
+	}
+	// results, err := repo.SearchPrices([]float64{-1.6237449645996096, 53.945882632598945, -1.4258193969726562, 54.03288059902232})
 	// if err != nil {
-	// 	fmt.Printf("Error fetching fuel prices: %v\n", err)
+	// 	fmt.Printf("Error searching: %v\n", err)
+	// 	return
 	// }
-	// log.Printf("Inserted %d PFS", numPFS)
-
-	numPrices, err := client.GetAllFuelPrices(func(prices []models.ForecourtPrices) error {
-		return repo.InsertPrices(prices)
-	})
-	if err != nil {
-		fmt.Printf("Error fetching fuel prices: %v\n", err)
-	}
-	log.Printf("Inserted %d price records", numPrices)
-
-	results, err := repo.SearchPrices([]float64{-1.6237449645996096, 53.945882632598945, -1.4258193969726562, 54.03288059902232})
-	if err != nil {
-		fmt.Printf("Error searching: %v\n", err)
-		return
-	}
-	log.Printf("Found %d results", len(results))
+	// log.Printf("Found %d results", len(results))
 }

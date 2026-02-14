@@ -22,12 +22,11 @@ var searchPfsSQL string
 var searchPricesSQL string
 
 type FuelPricesRepository interface {
-	InsertPFS(batch []models.PetrolFillingStation) error
-	InsertPrices(batch []models.ForecourtPrices) error
+	InsertPFS(batch []models.PetrolFillingStation) (int, error)
+	InsertPrices(batch []models.ForecourtPrices) (int, error)
 	Search(boundingBox []float64) ([]models.SearchResult, error)
 	SearchPrices(boundingBox []float64) (map[string]map[string][]models.PriceInfo, error) // Temporary method to return prices in a more query-friendly format
 }
-
 
 type sqliteRepository struct {
 	db *sql.DB
@@ -39,14 +38,14 @@ func NewFuelPricesRepository(db *sql.DB) FuelPricesRepository {
 	}
 }
 
-func (repo *sqliteRepository) InsertPFS(batch []models.PetrolFillingStation) error {
+func (repo *sqliteRepository) InsertPFS(batch []models.PetrolFillingStation) (int, error) {
 	if len(batch) == 0 {
-		return nil
+		return 0, nil
 	}
 
 	tx, err := repo.db.Begin()
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer func() {
 		if err != nil {
@@ -58,7 +57,7 @@ func (repo *sqliteRepository) InsertPFS(batch []models.PetrolFillingStation) err
 
 	stmt, err := tx.Prepare(insertPfsSQL)
 	if err != nil {
-		return fmt.Errorf("failed to prepare statement: %w", err)
+		return 0, fmt.Errorf("failed to prepare statement: %w", err)
 	}
 	defer func() {
 		if err := stmt.Close(); err != nil {
@@ -66,28 +65,30 @@ func (repo *sqliteRepository) InsertPFS(batch []models.PetrolFillingStation) err
 		}
 	}()
 
+	count := 0
 	for _, pfs := range batch {
 		_, err = stmt.Exec(pfs.ToTuple()...)
 		if err != nil {
-			return fmt.Errorf("failed to execute individual insert: %w", err)
+			return 0, fmt.Errorf("failed to execute individual insert: %w", err)
 		}
+		count++
 	}
 
 	if err = tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return nil
+	return count, nil
 }
 
-func (repo *sqliteRepository) InsertPrices(batch []models.ForecourtPrices) error {
+func (repo *sqliteRepository) InsertPrices(batch []models.ForecourtPrices) (int, error) {
 	if len(batch) == 0 {
-		return nil
+		return 0, nil
 	}
 
 	tx, err := repo.db.Begin()
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer func() {
 		if err != nil {
@@ -99,7 +100,7 @@ func (repo *sqliteRepository) InsertPrices(batch []models.ForecourtPrices) error
 
 	stmt, err := tx.Prepare(insertPricesSQL)
 	if err != nil {
-		return fmt.Errorf("failed to prepare statement: %w", err)
+		return 0, fmt.Errorf("failed to prepare statement: %w", err)
 	}
 	defer func() {
 		if err := stmt.Close(); err != nil {
@@ -107,20 +108,22 @@ func (repo *sqliteRepository) InsertPrices(batch []models.ForecourtPrices) error
 		}
 	}()
 
+	count := 0
 	for _, forecourtPrices := range batch {
 		for _, fuelPrice := range forecourtPrices.FuelPrices {
 			_, err = stmt.Exec(fuelPrice.ToTuple(forecourtPrices.NodeId)...)
 			if err != nil {
-				return fmt.Errorf("failed to execute individual insert: %w", err)
+				return 0, fmt.Errorf("failed to execute individual insert: %w", err)
 			}
+			count++
 		}
 	}
 
 	if err = tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return nil
+	return count, nil
 }
 
 func (repo *sqliteRepository) Search(boundingBox []float64) ([]models.SearchResult, error) {

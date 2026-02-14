@@ -17,9 +17,9 @@ Content-Type: application/json
 }
 
 ### Get fuel prices
-GET https://www.fuel-finder.service.gov.uk/api/v1/pfs/fuel-prices?batch-number=1
+GET https://www.fuel-finder.service.gov.uk/api/v1/pfs/fuel-prices?batch-number=1&effective-start-timestamp=2026-02-14T12:00:00
 Authorization: Bearer {{TOKEN}}
 
 ### Get PFS details
-GET https://www.fuel-finder.service.gov.uk/api/v1/pfs?batch-number=15
+GET https://www.fuel-finder.service.gov.uk/api/v1/pfs?batch-number=15&effective-start-timestamp=2026-01-01T12:00:00
 Authorization: Bearer {{TOKEN}}

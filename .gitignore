@@ -31,3 +31,4 @@ go.work.sum
 # .idea/
 .vscode/settings.json
 data/
+__debug_bin*
