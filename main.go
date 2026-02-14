@@ -39,20 +39,23 @@ func main() {
 		log.Fatalf("Authentication failed: %v\n", err)
 	}
 
+	count := 0
 	for {
-		numPFS, err := client.GetFillingStations(repo.InsertPFS)
-		if err != nil {
-			log.Fatalf("Error fetching PFS: %v\n", err)
+		if count%4 == 0 {
+			numPFS, err := client.GetFillingStations(repo.InsertPFS)
+			if err != nil {
+				log.Fatalf("Error fetching PFS: %v\n", err)
+			}
+			log.Printf("Inserted %d PFS", numPFS)
 		}
-		log.Printf("Inserted %d PFS", numPFS)
-
+		
 		numPrices, err := client.GetFuelPrices(repo.InsertPrices)
 		if err != nil {
 			log.Fatalf("Error fetching fuel prices: %v\n", err)
 		}
 		log.Printf("Inserted %d price records", numPrices)
 
-		time.Sleep(3 * time.Minute)
+		time.Sleep(15 * time.Minute)
 	}
 	// results, err := repo.SearchPrices([]float64{-1.6237449645996096, 53.945882632598945, -1.4258193969726562, 54.03288059902232})
 	// if err != nil {
