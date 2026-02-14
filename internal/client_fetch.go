@@ -212,17 +212,17 @@ func fetchBatched[T any](
 	count := 0
 
 	startTime := time.Now()
-	effectiveStartTimestamp := ""
-	if !lastFetch.IsZero() {
-		log.Printf("Time since last fetch for %s: %s", path, time.Since(*lastFetch))
-		effectiveStartTimestamp = lastFetch.Format("2006-01-02 15:04:05") // Not quite RFC3339 ...
-	}
+	// effectiveStartTimestamp := ""
+	// if !lastFetch.IsZero() {
+	// 	log.Printf("Time since last fetch for %s: %s", path, time.Since(*lastFetch))
+	// 	effectiveStartTimestamp = lastFetch.Format("2006-01-02 15:04:05") // Not quite RFC3339 ...
+	// }
 
 	for {
 		url := fmt.Sprintf("%s/%s?batch-number=%d", mgr.baseUrl, path, batchNo)
-		if effectiveStartTimestamp != "" {
-			url += "&effective-start-timestamp=" + neturl.QueryEscape(effectiveStartTimestamp)
-		}
+		// if effectiveStartTimestamp != "" {
+		// 	url += "&effective-start-timestamp=" + neturl.QueryEscape(effectiveStartTimestamp)
+		// }
 		body, err := mgr.get(url)
 		if err != nil {
 			var stErr *HTTPStatusError
