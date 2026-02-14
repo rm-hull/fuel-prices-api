@@ -1,13 +1,13 @@
 package models
 
 import (
-	"encoding/json"
+	// "encoding/json"
 	"log"
 	"time"
-	// jsoniter "github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 )
 
-// var json = jsoniter.ConfigCompatibleWithStandardLibrary
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type Location struct {
 	AddressLine1 string `json:"address_line_1"`

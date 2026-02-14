@@ -2,7 +2,6 @@ package internal
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,7 +10,10 @@ import (
 	"time"
 
 	"github.com/rm-hull/fuel-prices-api/internal/models"
+	jsoniter "github.com/json-iterator/go"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type FuelPricesClient interface {
 	Authenticate() error
@@ -83,11 +85,17 @@ func (mgr *fuelPricesManager) GetAllFuelPrices(callback func([]models.ForecourtP
 			}
 		}()
 
+		bodyBytes, err := io.ReadAll(body)
+		if err != nil {
+			return 0, fmt.Errorf("failed to read response body: %w", err)
+		}
+
 		var resp models.ForecourtPricesResponse
-		decoder := json.NewDecoder(body)
-		if err := decoder.Decode(&resp); err != nil {
+		if err := json.Unmarshal(bodyBytes, &resp); err != nil {
+			log.Printf("Response body: %s", string(bodyBytes))
 			return 0, fmt.Errorf("failed to unmarshal response: %w", err)
 		}
+
 		if !resp.Success {
 			return 0, fmt.Errorf("API error: %s", resp.Message)
 		}

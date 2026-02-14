@@ -11,13 +11,6 @@ import (
 //go:embed sql/migration.sql
 var migrationSQL string
 
-
-// //go:embed sql/insert_company_data.sql
-// var InsertCompanyDataSQL string
-
-// //go:embed sql/search.sql
-// var SearchSQL string
-
 func CreateDB(db *sql.DB) error {
 	_, err := db.Exec(migrationSQL)
 	return err

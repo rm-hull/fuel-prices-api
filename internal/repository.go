@@ -3,7 +3,6 @@ package internal
 import (
 	"database/sql"
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"log"
 
