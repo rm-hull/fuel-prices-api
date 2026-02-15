@@ -77,20 +77,24 @@ func (mgr *fuelPricesManager) GetFuelPrices(callback BatchCallback[models.Foreco
 			return nil, 0, fmt.Errorf("failed to read response body: %w", err)
 		}
 
+		// The GOV.UK API intermittently returns an array of forecourt prices instead of the expected
+		// object with metadata. To handle this gracefully, we check the first byte of the response.
+		// If it's an array, we treat it as a single batch with all records and log a warning. Otherwise,
+		// we proceed with normal unmarshalling. FISH!
 		var resp models.ForecourtPricesResponse
 		if bodyBytes[0] == '[' {
-			var wtf []models.ForecourtPrices
-			if err := json.Unmarshal(bodyBytes, &wtf); err != nil {
+			var forecourtPrices []models.ForecourtPrices
+			if err := json.Unmarshal(bodyBytes, &forecourtPrices); err != nil {
 				return nil, 0, fmt.Errorf("failed to unmarshal response: %w", err)
 			}
 			resp.Success = true
-			resp.Data = wtf
+			resp.Data = forecourtPrices
 			resp.MetaData = models.MetaData{
 				TotalBatches: batchNo + 2,
 				BatchNumber:  batchNo,
-				BatchSize:    len(wtf),
+				BatchSize:    len(forecourtPrices),
 			}
-			log.Printf("WARNING: API returned an array instead of the expected object, treating as a single batch with %d records", len(wtf))
+			log.Printf("WARNING: API returned an array instead of the expected object, treating as a single batch with %d records", len(forecourtPrices))
 		} else {
 			if err := json.Unmarshal(bodyBytes, &resp); err != nil {
 				return nil, 0, fmt.Errorf("failed to unmarshal response: %w", err)
