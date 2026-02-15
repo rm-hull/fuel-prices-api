@@ -296,6 +296,7 @@ func (mgr *fuelPricesManager) post(url, contentType string, data any) (io.ReadCl
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		_ = resp.Body.Close()
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
