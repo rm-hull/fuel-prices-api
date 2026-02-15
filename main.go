@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -21,12 +20,12 @@ func main() {
 
 	db, err := internal.Connect("data/fuel_prices.db")
 	if err != nil {
-		fmt.Printf("Database connection failed: %v\n", err)
+		log.Fatalf("Database connection failed: %v", err)
 		return
 	}
 	defer func() {
 		if err := db.Close(); err != nil {
-			fmt.Printf("Failed to close database: %v\n", err)
+			log.Fatalf("Failed to close database: %v", err)
 		}
 	}()
 	repo := internal.NewFuelPricesRepository(db)
@@ -48,7 +47,7 @@ func main() {
 			}
 			log.Printf("Inserted %d PFS", numPFS)
 		}
-		
+
 		numPrices, err := client.GetFuelPrices(repo.InsertPrices)
 		if err != nil {
 			log.Fatalf("Error fetching fuel prices: %v\n", err)

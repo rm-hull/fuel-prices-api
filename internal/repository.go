@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/rm-hull/fuel-prices-api/internal/models"
 )
@@ -25,7 +26,6 @@ type FuelPricesRepository interface {
 	InsertPFS(batch []models.PetrolFillingStation) (int, error)
 	InsertPrices(batch []models.ForecourtPrices) (int, error)
 	Search(boundingBox []float64) ([]models.SearchResult, error)
-	SearchPrices(boundingBox []float64) (map[string]map[string][]models.PriceInfo, error) // Temporary method to return prices in a more query-friendly format
 }
 
 type sqliteRepository struct {
@@ -127,22 +127,55 @@ func (repo *sqliteRepository) InsertPrices(batch []models.ForecourtPrices) (int,
 }
 
 func (repo *sqliteRepository) Search(boundingBox []float64) ([]models.SearchResult, error) {
+	var (
+		pfs       []models.SearchResult
+		prices    map[string]map[string][]models.PriceInfo
+		pfsErr    error
+		pricesErr error
+		wg        sync.WaitGroup
+	)
 
-	rows, err := repo.db.Query(searchPfsSQL, boundingBox[1], boundingBox[3], boundingBox[0], boundingBox[2])
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute search query: %w", err)
+	wg.Add(2)
+	go repo.fetchPfs(boundingBox, &pfs, &pfsErr, wg.Done)
+	go repo.fetchPrices(boundingBox, &prices, &pricesErr, wg.Done)
+
+	wg.Wait()
+
+	if pfsErr != nil {
+		return nil, pfsErr
+	}
+	if pricesErr != nil {
+		return nil, pricesErr
+	}
+
+	for i := range pfs {
+		nodeId := pfs[i].NodeId
+		if fuelPrices, ok := prices[nodeId]; ok {
+			pfs[i].FuelPrices = fuelPrices
+		}
+	}
+
+	return pfs, nil
+}
+
+func (repo *sqliteRepository) fetchPfs(boundingBox []float64, results *[]models.SearchResult, err *error, done func()) {
+	defer done()
+
+	rows, queryErr := repo.db.Query(searchPfsSQL, boundingBox[1], boundingBox[3], boundingBox[0], boundingBox[2])
+	if queryErr != nil {
+		*err = fmt.Errorf("failed to execute search query: %w", queryErr)
+		return
 	}
 	defer func() {
-		if err := rows.Close(); err != nil {
-			log.Printf("failed to close rows: %v", err)
+		if closeErr := rows.Close(); closeErr != nil {
+			log.Printf("failed to close rows: %v", closeErr)
 		}
 	}()
 
-	var results []models.SearchResult
 	for rows.Next() {
 		var result models.SearchResult
 		var openingTimesJSON, amenitiesJSON, fuelTypesJSON string
-		if err := rows.Scan(
+		if scanErr := rows.Scan(
 			&result.NodeId, &result.MftOrganisationName, &result.PublicPhoneNumber, &result.TradingName,
 			&result.IsSameTradingAndBrandName, &result.BrandName, &result.TemporaryClosure,
 			&result.PermanentClosure, &result.PermanentClosureDate, &result.IsMotorwayServiceStation,
@@ -150,57 +183,60 @@ func (repo *sqliteRepository) Search(boundingBox []float64) ([]models.SearchResu
 			&result.Location.AddressLine1, &result.Location.AddressLine2, &result.Location.City, &result.Location.Country,
 			&result.Location.County, &result.Location.Postcode, &result.Location.Latitude, &result.Location.Longitude,
 			&openingTimesJSON, &amenitiesJSON, &fuelTypesJSON,
-		); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
+		); scanErr != nil {
+			*err = fmt.Errorf("failed to scan row: %w", scanErr)
+			return
 		}
-		if err := json.Unmarshal([]byte(openingTimesJSON), &result.OpeningTimes); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal opening times: %w", err)
+		if unmarshalErr := json.Unmarshal([]byte(openingTimesJSON), &result.OpeningTimes); unmarshalErr != nil {
+			*err = fmt.Errorf("failed to unmarshal opening times: %w", unmarshalErr)
+			return
 		}
-		if err := json.Unmarshal([]byte(amenitiesJSON), &result.Amenities); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal amenities: %w", err)
+		if unmarshalErr := json.Unmarshal([]byte(amenitiesJSON), &result.Amenities); unmarshalErr != nil {
+			*err = fmt.Errorf("failed to unmarshal amenities: %w", unmarshalErr)
+			return
 		}
-		if err := json.Unmarshal([]byte(fuelTypesJSON), &result.FuelTypes); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal fuel types: %w", err)
+		if unmarshalErr := json.Unmarshal([]byte(fuelTypesJSON), &result.FuelTypes); unmarshalErr != nil {
+			*err = fmt.Errorf("failed to unmarshal fuel types: %w", unmarshalErr)
+			return
 		}
-		results = append(results, result)
+		*results = append(*results, result)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating over rows: %w", err)
+	if rowsErr := rows.Err(); rowsErr != nil {
+		*err = fmt.Errorf("error iterating over rows: %w", rowsErr)
 	}
-
-	return results, nil
 }
 
-func (repo *sqliteRepository) SearchPrices(boundingBox []float64) (map[string]map[string][]models.PriceInfo, error) {
+func (repo *sqliteRepository) fetchPrices(boundingBox []float64, results *map[string]map[string][]models.PriceInfo, err *error, done func()) {
+	defer done()
 
-	rows, err := repo.db.Query(searchPricesSQL, boundingBox[1], boundingBox[3], boundingBox[0], boundingBox[2])
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute search query: %w", err)
+	rows, queryErr := repo.db.Query(searchPricesSQL, boundingBox[1], boundingBox[3], boundingBox[0], boundingBox[2])
+	if queryErr != nil {
+		*err = fmt.Errorf("failed to execute search query: %w", queryErr)
+		return
 	}
 	defer func() {
-		if err := rows.Close(); err != nil {
-			log.Printf("failed to close rows: %v", err)
+		if closeErr := rows.Close(); closeErr != nil {
+			log.Printf("failed to close rows: %v", closeErr)
 		}
 	}()
 
-	results := make(map[string]map[string][]models.PriceInfo)
+	*results = make(map[string]map[string][]models.PriceInfo)
 
 	for rows.Next() {
 		var nodeId string
 		var fuelPrice models.FuelPrice
-		if err := rows.Scan(&nodeId, &fuelPrice.FuelType, &fuelPrice.PriceLastUpdated, &fuelPrice.Price); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
+		if scanErr := rows.Scan(&nodeId, &fuelPrice.FuelType, &fuelPrice.PriceLastUpdated, &fuelPrice.Price); scanErr != nil {
+			*err = fmt.Errorf("failed to scan row: %w", scanErr)
+			return
 		}
-		if _, exists := results[nodeId]; !exists {
-			results[nodeId] = make(map[string][]models.PriceInfo)
+		if _, exists := (*results)[nodeId]; !exists {
+			(*results)[nodeId] = make(map[string][]models.PriceInfo)
 		}
 
-		results[nodeId][fuelPrice.FuelType] = append(results[nodeId][fuelPrice.FuelType], models.PriceInfo{
+		(*results)[nodeId][fuelPrice.FuelType] = append((*results)[nodeId][fuelPrice.FuelType], models.PriceInfo{
 			Price:     fuelPrice.Price,
 			UpdatedOn: fuelPrice.PriceLastUpdated,
 		})
 	}
-
-	return results, nil
 }

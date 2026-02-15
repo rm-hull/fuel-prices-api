@@ -13,7 +13,7 @@ Content-Type: application/json
 
 {
   "client_id": "{{CLIENT_ID}}",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJraW5kIjoicHVibGljIiwiY2xpZW50X2lkIjoiRFFlNjU3Zm9YdDNEOVRZRDNKUnRJRzI1Y3ZMSmtjZkUiLCJpbmZvX3JlY2lwaWVudF9pZCI6ImJmNWY5MjdmLTc3MDgtNDkxMC04Mjg4LWZhODBjNzMzOTFmMiIsInRva2VuX3VzZSI6InJlZnJlc2giLCJzdWIiOiJEUWU2NTdmb1h0M0Q5VFlEM0pSdElHMjVjdkxKa2NmRSIsImF1ZCI6Im9hdXRoIiwiaWF0IjoxNzcxMDYzMDE2LCJleHAiOjE3NzEyMzU4MTZ9.dCkzx8TtX_PBoY20VuNftttVR2V6tIZoe0TDKTFwwKI"
+  "refresh_token": "{{REFRESH_TOKEN}}"
 }
 
 ### Get fuel prices
