@@ -51,6 +51,9 @@ func ApiServer(dbPath string, port int, debug bool) {
 	}()
 
 	repo := internal.NewFuelPricesRepository(db)
+	if _, err := internal.StartCron(client, repo); err != nil {
+		log.Fatalf("failed to start CRON jobs: %v", err)
+	}
 
 	r := gin.New()
 
@@ -89,46 +92,3 @@ func ApiServer(dbPath string, port int, debug bool) {
 		log.Fatalf("HTTP API Server failed to start on port %d: %v", port, err)
 	}
 }
-
-// func main() {
-
-// 	db, err := internal.Connect("data/fuel_prices.db")
-// 	if err != nil {
-// 		log.Fatalf("Database connection failed: %v", err)
-// 		return
-// 	}
-// 	defer func() {
-// 		if err := db.Close(); err != nil {
-// 			log.Fatalf("Failed to close database: %v", err)
-// 		}
-// 	}()
-// 	repo := internal.NewFuelPricesRepository(db)
-
-// 	clientId := os.Getenv("CLIENT_ID")
-// 	clientSecret := os.Getenv("CLIENT_SECRET")
-
-// 	client, err := internal.NewFuelPricesClient(clientId, clientSecret)
-// 	if err != nil {
-// 		log.Fatalf("Authentication failed: %v\n", err)
-// 	}
-
-// 	count := 0
-// 	for {
-// 		if count%4 == 0 {
-// 			numPFS, err := client.GetFillingStations(repo.InsertPFS)
-// 			if err != nil {
-// 				log.Fatalf("Error fetching PFS: %v\n", err)
-// 			}
-// 			log.Printf("Inserted %d PFS", numPFS)
-// 		}
-
-// 		numPrices, err := client.GetFuelPrices(repo.InsertPrices)
-// 		if err != nil {
-// 			log.Fatalf("Error fetching fuel prices: %v\n", err)
-// 		}
-// 		log.Printf("Inserted %d price records", numPrices)
-
-// 		time.Sleep(15 * time.Minute)
-// 		count++
-// 	}
-// }
