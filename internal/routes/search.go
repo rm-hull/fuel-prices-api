@@ -14,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const MAX_BOUNDS = 5000 // Maximum bounds in meters (5 KM)
+const MAX_BOUNDS = 50_000 // Maximum bounds in meters (50 KM)
 
 func Search(repo internal.FuelPricesRepository, client internal.FuelPricesClient) func(c *gin.Context) {
 	return func(c *gin.Context) {
@@ -55,7 +55,11 @@ func parseBBox(bboxStr string) ([]float64, error) {
 		bbox[i] = val
 	}
 
-	if math.Abs(bbox[2]-bbox[0]) > MAX_BOUNDS || math.Abs(bbox[3]-bbox[1]) > MAX_BOUNDS {
+	latSpan := bbox[3] - bbox[1]
+	lonSpan := bbox[2] - bbox[0]
+	avgLatRad := (bbox[1] + bbox[3]) / 2 * math.Pi / 180.0
+
+	if math.Abs(latSpan)*111132 > MAX_BOUNDS || math.Abs(lonSpan)*111132*math.Cos(avgLatRad) > MAX_BOUNDS {
 		return nil, fmt.Errorf("bbox must define a valid area (no more than %d KM in either dimension)", MAX_BOUNDS/1000)
 	}
 
