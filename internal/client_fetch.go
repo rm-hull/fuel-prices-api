@@ -46,14 +46,12 @@ type fuelPricesManager struct {
 	authReq     models.AuthRequest
 	tokenData   models.TokenData
 	timeTracker timeTracker
-	startTime   time.Time
 	client      *http.Client
 }
 
 func NewFuelPricesClient(clientId, clientSecret string) (FuelPricesClient, error) {
 	mgr := &fuelPricesManager{
 		baseUrl:   "https://www.fuel-finder.service.gov.uk/api/v1",
-		startTime: time.Now(),
 		timeTracker: timeTracker{
 			started: time.Now(),
 		},
