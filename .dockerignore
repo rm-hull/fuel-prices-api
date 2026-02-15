@@ -1,0 +1,8 @@
+.github
+.vscode
+data/fuel_prices.db*
+LICENSE.md
+README.md
+ATTRIBUTION.md
+.env*
+docker-compose.yml
