@@ -1,0 +1,25 @@
+### Token request
+POST https://www.fuel-finder.service.gov.uk/api/v1/oauth/generate_access_token
+Content-Type: application/json
+
+{
+  "client_id": "{{CLIENT_ID}}",
+  "client_secret": "{{CLIENT_SECRET}}"
+}
+
+### Token refresh
+POST https://www.fuel-finder.service.gov.uk/api/v1/oauth/regenerate_access_token
+Content-Type: application/json
+
+{
+  "client_id": "{{CLIENT_ID}}",
+  "refresh_token": "{{REFRESH_TOKEN}}"
+}
+
+### Get fuel prices
+GET https://www.fuel-finder.service.gov.uk/api/v1/pfs/fuel-prices?batch-number=1&effective-start-timestamp=2026-02-14T12:00:00
+Authorization: Bearer {{TOKEN}}
+
+### Get PFS details
+GET https://www.fuel-finder.service.gov.uk/api/v1/pfs?batch-number=15&effective-start-timestamp=2026-01-01T12:00:00
+Authorization: Bearer {{TOKEN}}
