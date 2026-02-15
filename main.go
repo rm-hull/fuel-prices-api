@@ -55,11 +55,16 @@ func main() {
 		log.Printf("Inserted %d price records", numPrices)
 
 		time.Sleep(15 * time.Minute)
+		count++
 	}
-	// results, err := repo.SearchPrices([]float64{-1.6237449645996096, 53.945882632598945, -1.4258193969726562, 54.03288059902232})
+	// results, err := repo.Search([]float64{-1.6237449645996096, 53.945882632598945, -1.4258193969726562, 54.03288059902232})
 	// if err != nil {
-	// 	fmt.Printf("Error searching: %v\n", err)
-	// 	return
+	// 	log.Fatalf("Error searching: %v", err)
 	// }
 	// log.Printf("Found %d results", len(results))
+	// jsonBytes, err := json.MarshalIndent(results, "", "  ")
+	// if err != nil {
+	// 	log.Fatalf("Error marshalling results: %v", err)
+	// }
+	// log.Printf("Results:\n%s", string(jsonBytes))
 }

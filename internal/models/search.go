@@ -9,5 +9,5 @@ type PriceInfo struct {
 
 type SearchResult struct {
 	PetrolFillingStation
-	FuelPrices map[string][]PriceInfo `json:"fuel_prices"`
+	FuelPrices map[string][]PriceInfo `json:"fuel_prices,omitempty"`
 }
