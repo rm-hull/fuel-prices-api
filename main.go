@@ -1,70 +1,36 @@
 package main
 
 import (
-	"log"
-	"os"
-	"time"
+	"github.com/rm-hull/fuel-prices-api/cmd"
 
-	"github.com/joho/godotenv"
-	"github.com/rm-hull/fuel-prices-api/internal"
-
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/spf13/cobra"
 )
 
 func main() {
+	var err error
+	var dbPath string
+	var port int
+	var debug bool
 
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
+	rootCmd := &cobra.Command{
+		Use:  "fuel-prices",
+		Long: `Fuel Prices API`,
 	}
 
-	db, err := internal.Connect("data/fuel_prices.db")
-	if err != nil {
-		log.Fatalf("Database connection failed: %v", err)
-		return
+	apiServerCmd := &cobra.Command{
+		Use:   "api-server [--db <path>] [--port <port>] [--debug]",
+		Short: "Start HTTP API server",
+		Run: func(_ *cobra.Command, _ []string) {
+			cmd.ApiServer(dbPath, port, debug)
+		},
 	}
-	defer func() {
-		if err := db.Close(); err != nil {
-			log.Fatalf("Failed to close database: %v", err)
-		}
-	}()
-	repo := internal.NewFuelPricesRepository(db)
+	apiServerCmd.Flags().IntVar(&port, "port", 8080, "Port to run HTTP server on")
+	apiServerCmd.Flags().BoolVar(&debug, "debug", false, "Enable debugging (pprof) - WARING: do not enable in production")
 
-	clientId := os.Getenv("CLIENT_ID")
-	clientSecret := os.Getenv("CLIENT_SECRET")
+	rootCmd.AddCommand(apiServerCmd)
+	rootCmd.PersistentFlags().StringVar(&dbPath, "db", "./data/fuel_prices.db", "Path to fuel-prices SQLite database")
 
-	client, err := internal.NewFuelPricesClient(clientId, clientSecret)
-	if err != nil {
-		log.Fatalf("Authentication failed: %v\n", err)
+	if err = rootCmd.Execute(); err != nil {
+		panic(err)
 	}
-
-	count := 0
-	for {
-		if count%4 == 0 {
-			numPFS, err := client.GetFillingStations(repo.InsertPFS)
-			if err != nil {
-				log.Fatalf("Error fetching PFS: %v\n", err)
-			}
-			log.Printf("Inserted %d PFS", numPFS)
-		}
-
-		numPrices, err := client.GetFuelPrices(repo.InsertPrices)
-		if err != nil {
-			log.Fatalf("Error fetching fuel prices: %v\n", err)
-		}
-		log.Printf("Inserted %d price records", numPrices)
-
-		time.Sleep(15 * time.Minute)
-		count++
-	}
-	// results, err := repo.Search([]float64{-1.6237449645996096, 53.945882632598945, -1.4258193969726562, 54.03288059902232})
-	// if err != nil {
-	// 	log.Fatalf("Error searching: %v", err)
-	// }
-	// log.Printf("Found %d results", len(results))
-	// jsonBytes, err := json.MarshalIndent(results, "", "  ")
-	// if err != nil {
-	// 	log.Fatalf("Error marshalling results: %v", err)
-	// }
-	// log.Printf("Results:\n%s", string(jsonBytes))
 }

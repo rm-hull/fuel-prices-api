@@ -23,3 +23,6 @@ Authorization: Bearer {{TOKEN}}
 ### Get PFS details
 GET https://www.fuel-finder.service.gov.uk/api/v1/pfs?batch-number=15&effective-start-timestamp=2026-01-01T12:00:00
 Authorization: Bearer {{TOKEN}}
+
+### Search fuel prices by bounding box
+GET http://localhost:8080/v1/fuel-prices/search?bbox=-1.6237,53.9458,-1.4258,54.0328

@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+
 	// neturl "net/url"
 	"time"
 
@@ -32,6 +33,7 @@ type BatchCallback[T any] func([]T) (int, error)
 type FuelPricesClient interface {
 	GetFuelPrices(BatchCallback[models.ForecourtPrices]) (int, error)
 	GetFillingStations(BatchCallback[models.PetrolFillingStation]) (int, error)
+	LastUpdated() *time.Time
 }
 
 type timeTracker struct {
@@ -51,7 +53,7 @@ type fuelPricesManager struct {
 
 func NewFuelPricesClient(clientId, clientSecret string) (FuelPricesClient, error) {
 	mgr := &fuelPricesManager{
-		baseUrl:   "https://www.fuel-finder.service.gov.uk/api/v1",
+		baseUrl: "https://www.fuel-finder.service.gov.uk/api/v1",
 		timeTracker: timeTracker{
 			started: time.Now(),
 		},
@@ -68,6 +70,13 @@ func NewFuelPricesClient(clientId, clientSecret string) (FuelPricesClient, error
 	}
 
 	return mgr, nil
+}
+
+func (mgr *fuelPricesManager) LastUpdated() *time.Time {
+	if mgr.timeTracker.lastPricesFetch.IsZero() {
+		return nil
+	}
+	return &mgr.timeTracker.lastPricesFetch
 }
 
 func (mgr *fuelPricesManager) GetFuelPrices(callback BatchCallback[models.ForecourtPrices]) (int, error) {

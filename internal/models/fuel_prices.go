@@ -11,12 +11,12 @@ import (
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type Location struct {
-	AddressLine1 string `json:"address_line_1"`
-	AddressLine2 string `json:"address_line_2"`
-	City         string `json:"city"`
-	Country      string `json:"country"`
-	County       string `json:"county"`
-	Postcode     string `json:"postcode"`
+	AddressLine1 string  `json:"address_line_1"`
+	AddressLine2 string  `json:"address_line_2,omitempty"`
+	City         string  `json:"city"`
+	Country      string  `json:"country"`
+	County       string  `json:"county,omitempty"`
+	Postcode     string  `json:"postcode"`
 	Latitude     float64 `json:"latitude,string"`
 	Longitude    float64 `json:"longitude,string"`
 }
