@@ -17,8 +17,8 @@ type Location struct {
 	Country      string `json:"country"`
 	County       string `json:"county"`
 	Postcode     string `json:"postcode"`
-	Latitude     string `json:"latitude"`
-	Longitude    string `json:"longitude"`
+	Latitude     float64 `json:"latitude,string"`
+	Longitude    float64 `json:"longitude,string"`
 }
 
 type DailyOpeningTimes struct {
