@@ -12,10 +12,10 @@ FROM (
     ROW_NUMBER() OVER (PARTITION BY node_id, fuel_type ORDER BY price_last_updated DESC) AS price_recency_rank
   FROM (
     SELECT
-      fp.node_id,
-      fp.fuel_type,
-      fp.price_last_updated,
-      fp.price
+      node_id,
+      fuel_type,
+      price_last_updated,
+      price
     FROM (
       SELECT
         fp.node_id,
