@@ -25,7 +25,7 @@ var searchPricesSQL string
 type FuelPricesRepository interface {
 	InsertPFS(batch []models.PetrolFillingStation) (int, error)
 	InsertPrices(batch []models.ForecourtPrices) (int, error)
-	Search(boundingBox []float64) ([]models.SearchResult, error)
+	Search(boundingBox []float64, perTypeLimit int) ([]models.SearchResult, error)
 }
 
 type sqliteRepository struct {
@@ -126,7 +126,7 @@ func (repo *sqliteRepository) InsertPrices(batch []models.ForecourtPrices) (int,
 	return count, nil
 }
 
-func (repo *sqliteRepository) Search(boundingBox []float64) ([]models.SearchResult, error) {
+func (repo *sqliteRepository) Search(boundingBox []float64, perTypeLimit int) ([]models.SearchResult, error) {
 	var (
 		pfs       []models.SearchResult
 		prices    map[string]map[string][]models.PriceInfo
@@ -137,7 +137,7 @@ func (repo *sqliteRepository) Search(boundingBox []float64) ([]models.SearchResu
 
 	wg.Add(2)
 	go repo.fetchPfs(boundingBox, &pfs, &pfsErr, wg.Done)
-	go repo.fetchPrices(boundingBox, &prices, &pricesErr, wg.Done)
+	go repo.fetchPrices(boundingBox, &prices, &pricesErr, perTypeLimit, wg.Done)
 
 	wg.Wait()
 
@@ -207,10 +207,10 @@ func (repo *sqliteRepository) fetchPfs(boundingBox []float64, results *[]models.
 	}
 }
 
-func (repo *sqliteRepository) fetchPrices(boundingBox []float64, results *map[string]map[string][]models.PriceInfo, err *error, done func()) {
+func (repo *sqliteRepository) fetchPrices(boundingBox []float64, results *map[string]map[string][]models.PriceInfo, err *error, perTypeLimit int, done func()) {
 	defer done()
 
-	rows, queryErr := repo.db.Query(searchPricesSQL, boundingBox[1], boundingBox[3], boundingBox[0], boundingBox[2])
+	rows, queryErr := repo.db.Query(searchPricesSQL, boundingBox[1], boundingBox[3], boundingBox[0], boundingBox[2], perTypeLimit)
 	if queryErr != nil {
 		*err = fmt.Errorf("failed to execute search query: %w", queryErr)
 		return

@@ -24,7 +24,18 @@ func Search(repo internal.FuelPricesRepository, client internal.FuelPricesClient
 			return
 		}
 
-		results, err := repo.Search(bbox)
+		limitStr := c.Query("limit")
+		limit := 1 // default to 1 (most recent only) if not provided
+		if limitStr != "" {
+			l, lerr := strconv.Atoi(limitStr)
+			if lerr != nil || l < 0 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid limit parameter"})
+				return
+			}
+			limit = l
+		}
+
+		results, err := repo.Search(bbox, limit)
 
 		if err != nil {
 			log.Printf("error while fetching fuel prices: %v", err)
