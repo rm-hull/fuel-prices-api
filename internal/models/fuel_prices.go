@@ -36,7 +36,7 @@ type PetrolFillingStation struct {
 	BrandName                   string     `json:"brand_name"`
 	TemporaryClosure            bool       `json:"temporary_closure"`
 	PermanentClosure            bool       `json:"permanent_closure"`
-	PermanentClosureDate        *time.Time `json:"permanent_closure_date"`
+	PermanentClosureDate        *time.Time `json:"permanent_closure_date,omitempty"`
 	IsMotorwayServiceStation    bool       `json:"is_motorway_service_station"`
 	IsSupermarketServiceStation bool       `json:"is_supermarket_service_station"`
 	Location                    Location   `json:"location"`
