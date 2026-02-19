@@ -10,3 +10,7 @@ FROM fuel_prices
 GROUP BY node_id, fuel_type
 HAVING COUNT(*) > 1;
 ```
+
+## References
+
+* https://www.developer.fuel-finder.service.gov.uk/public-api
