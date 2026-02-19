@@ -18,6 +18,11 @@ func Migrate(migrationsPath, dbPath string) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if sErr, dErr := m.Close(); sErr != nil || dErr != nil {
+			log.Printf("migration close error: source=%v, db=%v", sErr, dErr)
+		}
+	}()
 
 	err = m.Up()
 	if err != nil && err != migrate.ErrNoChange {

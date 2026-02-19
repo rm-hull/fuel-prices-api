@@ -16,16 +16,18 @@ func setupTestDB(t *testing.T) FuelPricesRepository {
 	dbPath := tmpFile.Name()
 	_ = tmpFile.Close()
 
-	t.Cleanup(func() {
-		_ = os.Remove(dbPath)
-	})
-
 	db, err := Connect(dbPath)
 	require.NoError(t, err)
 	db.SetMaxOpenConns(1)
 
 	err = Migrate("../migrations", dbPath)
 	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+		_ = os.Remove(dbPath)
+	})
+	
 	return NewFuelPricesRepository(db)
 }
 
