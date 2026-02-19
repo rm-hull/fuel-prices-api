@@ -17,7 +17,7 @@ type Result[T any] struct {
 func ParseCSV[T any](reader io.Reader, includesHeader bool, fromFunc func(data []string, headers []string) (T, error)) iter.Seq[Result[T]] {
 
 	return func(yield func(Result[T]) bool) {
-		lineNum := 0
+		lineNum := 1
 		csvReader := csv.NewReader(reader)
 		var headers []string
 		var err error

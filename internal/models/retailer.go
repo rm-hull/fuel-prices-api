@@ -35,10 +35,17 @@ func FromCSV(record, headers []string) (*Retailer, error) {
 type Retailers map[string]*Retailer
 
 func (r *Retailers) MatchBrandName(name string) *Retailer {
-	for word := range strings.FieldsSeq(strings.ToUpper(name)) {
-		if retailer, exists := (*r)[word]; exists {
-			return retailer
+	normalized := strings.ToUpper(name)
+	var bestMatch *Retailer
+	maxLength := 0
+
+	for retailerName, retailer := range *r {
+		if strings.HasPrefix(normalized, retailerName) {
+			if len(retailerName) > maxLength {
+				maxLength = len(retailerName)
+				bestMatch = retailer
+			}
 		}
 	}
-	return nil
+	return bestMatch
 }
