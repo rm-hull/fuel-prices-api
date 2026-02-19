@@ -27,8 +27,8 @@ func setupTestDB(t *testing.T) FuelPricesRepository {
 		require.NoError(t, db.Close())
 		_ = os.Remove(dbPath)
 	})
-	
-	return NewFuelPricesRepository(db)
+
+	return NewFuelPricesRepository(db, &models.Retailers{})
 }
 
 func TestFetchPricesIntegration(t *testing.T) {

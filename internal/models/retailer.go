@@ -1,9 +1,11 @@
 package models
 
+import "strings"
+
 type Retailer struct {
-	Name    string
-	Url     string
-	Favicon *string
+	Name    string  `json:"name"`
+	Url     string  `json:"url"`
+	Favicon *string `json:"favicon,omitempty"`
 }
 
 func (org *Retailer) ToCSV() []string {
@@ -28,4 +30,15 @@ func FromCSV(record, headers []string) (*Retailer, error) {
 		retailer.Favicon = &record[2]
 	}
 	return retailer, nil
+}
+
+type Retailers map[string]*Retailer
+
+func (r *Retailers) MatchBrandName(name string) *Retailer {
+	for word := range strings.FieldsSeq(strings.ToUpper(name)) {
+		if retailer, exists := (*r)[word]; exists {
+			return retailer
+		}
+	}
+	return nil
 }

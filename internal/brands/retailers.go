@@ -26,7 +26,7 @@ func GetRetailersList() ([]*models.Retailer, error) {
 	return arr, nil
 }
 
-func GetRetailersMap() (Retailers, error) {
+func GetRetailersMap() (models.Retailers, error) {
 	retailers, err := GetRetailersList()
 	if err != nil {
 		return nil, err
@@ -42,5 +42,3 @@ func GetRetailersMap() (Retailers, error) {
 
 	return m, nil
 }
-
-type Retailers map[string]*models.Retailer

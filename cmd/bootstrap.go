@@ -9,6 +9,7 @@ import (
 	"github.com/rm-hull/godx"
 
 	"github.com/rm-hull/fuel-prices-api/internal"
+	"github.com/rm-hull/fuel-prices-api/internal/brands"
 )
 
 // bootstrap initialises shared resources used by both the API server and import
@@ -41,7 +42,12 @@ func bootstrap(dbPath string) (internal.FuelPricesClient, internal.FuelPricesRep
 		return nil, nil, fmt.Errorf("failed to migrate SQL: %w", err)
 	}
 
-	repo := internal.NewFuelPricesRepository(db)
+	retailers, err := brands.GetRetailersMap()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to load retailers: %w", err)
+	}
+
+	repo := internal.NewFuelPricesRepository(db, &retailers)
 
 	return client, repo, nil
 }

@@ -7,18 +7,19 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/rm-hull/fuel-prices-api/internal/brands"
+	"github.com/rm-hull/fuel-prices-api/internal/favicon"
 	"github.com/rm-hull/fuel-prices-api/internal/models"
 )
 
 func UpdateFaviconsInCSV(csvFile string) error {
 
-	orgs, err := brands.GetRetailersList()
+	retailers, err := brands.GetRetailersList()
 	if err != nil {
 		return err
 	}
 
-	updated := make([]*models.Retailer, 0, len(orgs))
-	for idx, record := range orgs {
+	updated := make([]*models.Retailer, 0, len(retailers))
+	for idx, record := range retailers {
 
 		log.Printf("Processing record %d: %s", idx, record.Url)
 
