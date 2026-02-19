@@ -19,6 +19,14 @@
             "mode": "auto",
             "program": "main.go",
             "args": ["import"]
+        },
+        {
+            "name": "Update favicons",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "main.go",
+            "args": ["favicons"]
         }
     ]
 }

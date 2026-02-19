@@ -32,12 +32,14 @@ type FuelPricesRepository interface {
 }
 
 type sqliteRepository struct {
-	db *sql.DB
+	db        *sql.DB
+	retailers *models.Retailers
 }
 
-func NewFuelPricesRepository(db *sql.DB) FuelPricesRepository {
+func NewFuelPricesRepository(db *sql.DB, retailers *models.Retailers) FuelPricesRepository {
 	return &sqliteRepository{
-		db: db,
+		db:        db,
+		retailers: retailers,
 	}
 }
 
@@ -210,6 +212,8 @@ func (repo *sqliteRepository) fetchPfs(boundingBox []float64, results *[]models.
 			*err = fmt.Errorf("failed to unmarshal fuel types: %w", unmarshalErr)
 			return
 		}
+
+		result.Retailer = repo.retailers.MatchBrandName(result.BrandName)
 		*results = append(*results, result)
 	}
 

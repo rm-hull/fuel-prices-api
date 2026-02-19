@@ -11,6 +11,7 @@ type PriceInfo struct {
 type SearchResult struct {
 	PetrolFillingStation
 	FuelPrices map[string][]PriceInfo `json:"fuel_prices,omitempty"`
+	Retailer   *Retailer              `json:"retailer,omitempty"`
 }
 
 type SearchResponse struct {
