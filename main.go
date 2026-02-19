@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/rm-hull/fuel-prices-api/cmd"
 
 	"github.com/spf13/cobra"
@@ -40,6 +42,6 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&dbPath, "db", "./data/fuel_prices.db", "Path to fuel-prices SQLite database")
 
 	if err = rootCmd.Execute(); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }
