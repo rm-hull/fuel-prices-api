@@ -134,9 +134,7 @@ func cleanseAddressLine1(addressLine1, city, postcode string) string {
 	}
 
 	for _, suffix := range suffixesToRemove {
-		if strings.HasSuffix(addressLine1, suffix) {
-			addressLine1 = strings.Replace(addressLine1, suffix, "", 1)
-		}
+		addressLine1 = strings.TrimSuffix(addressLine1, suffix)
 	}
 	return addressLine1
 }
