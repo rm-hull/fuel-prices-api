@@ -1,0 +1,2 @@
+ALTER TABLE fuel_prices
+ADD COLUMN price_change_effective_timestamp DATETIME;

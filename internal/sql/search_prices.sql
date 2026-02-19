@@ -4,6 +4,7 @@ WITH filtered_prices AS (
     fp.fuel_type,
     fp.price_last_updated,
     fp.price,
+    fp.price_change_effective_timestamp,
     LAG(fp.price) OVER (
       PARTITION BY fp.node_id, fp.fuel_type
       ORDER BY fp.price_last_updated
@@ -18,7 +19,8 @@ price_changes AS (
     node_id,
     fuel_type,
     price_last_updated,
-    price
+    price,
+    price_change_effective_timestamp
   FROM filtered_prices
   WHERE price IS DISTINCT FROM prev_price
 ),
@@ -28,6 +30,7 @@ ranked_prices AS (
     fuel_type,
     price_last_updated,
     price,
+    price_change_effective_timestamp,
     ROW_NUMBER() OVER (
       PARTITION BY node_id, fuel_type
       ORDER BY price_last_updated DESC
@@ -38,6 +41,7 @@ SELECT
   node_id,
   fuel_type,
   price_last_updated,
-  price
+  price,
+  price_change_effective_timestamp
 FROM ranked_prices
 WHERE price_recency_rank <= ?;

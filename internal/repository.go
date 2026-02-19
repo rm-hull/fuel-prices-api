@@ -226,7 +226,10 @@ func (repo *sqliteRepository) fetchPrices(boundingBox []float64, results *map[st
 	for rows.Next() {
 		var nodeId string
 		var fuelPrice models.FuelPrice
-		if scanErr := rows.Scan(&nodeId, &fuelPrice.FuelType, &fuelPrice.PriceLastUpdated, &fuelPrice.Price); scanErr != nil {
+		if scanErr := rows.Scan(
+			&nodeId, &fuelPrice.FuelType, &fuelPrice.PriceLastUpdated,
+			&fuelPrice.Price, &fuelPrice.PriceChangeEffectiveTimestamp,
+		); scanErr != nil {
 			*err = fmt.Errorf("failed to scan row: %w", scanErr)
 			return
 		}
@@ -235,8 +238,9 @@ func (repo *sqliteRepository) fetchPrices(boundingBox []float64, results *map[st
 		}
 
 		(*results)[nodeId][fuelPrice.FuelType] = append((*results)[nodeId][fuelPrice.FuelType], models.PriceInfo{
-			Price:     fuelPrice.Price,
-			UpdatedOn: fuelPrice.PriceLastUpdated,
+			Price:         fuelPrice.Price,
+			UpdatedOn:     fuelPrice.PriceLastUpdated,
+			EffectiveFrom: fuelPrice.PriceChangeEffectiveTimestamp,
 		})
 	}
 }
