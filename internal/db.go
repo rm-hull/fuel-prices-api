@@ -7,15 +7,29 @@ import (
 	"log"
 	"strings"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/sqlite3"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-//go:embed sql/migration.sql
-var migrationSQL string
+func Migrate(migrationsPath, dbPath string) error {
+	m, err := migrate.New("file://"+migrationsPath, "sqlite3://"+dbPath)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if sErr, dErr := m.Close(); sErr != nil || dErr != nil {
+			log.Printf("migration close error: source=%v, db=%v", sErr, dErr)
+		}
+	}()
 
-func CreateDB(db *sql.DB) error {
-	_, err := db.Exec(migrationSQL)
-	return err
+	err = m.Up()
+	if err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+
+	return nil
 }
 
 func Connect(dbPath string) (*sql.DB, error) {
@@ -36,11 +50,5 @@ func Connect(dbPath string) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 	log.Printf("connected to database: %s", dsn)
-
-	err = CreateDB(db)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create database: %w", err)
-	}
 	return db, nil
 }
-

@@ -3,8 +3,9 @@ package models
 import "time"
 
 type PriceInfo struct {
-	Price     float64   `json:"price"`
-	UpdatedOn time.Time `json:"updated_on"`
+	Price         float64    `json:"price"`
+	UpdatedOn     time.Time  `json:"updated_on"`
+	EffectiveFrom *time.Time `json:"effective_from,omitempty"`
 }
 
 type SearchResult struct {

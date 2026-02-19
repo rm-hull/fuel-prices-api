@@ -1,0 +1,2 @@
+ALTER TABLE fuel_prices
+DROP COLUMN price_change_effective_timestamp;

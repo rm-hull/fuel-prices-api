@@ -54,9 +54,10 @@ type PetrolFillingStation struct {
 }
 
 type FuelPrice struct {
-	FuelType         string    `json:"fuel_type"`
-	Price            float64   `json:"price"`
-	PriceLastUpdated time.Time `json:"price_last_updated"`
+	FuelType                      string     `json:"fuel_type"`
+	Price                         float64    `json:"price"`
+	PriceLastUpdated              time.Time  `json:"price_last_updated"`
+	PriceChangeEffectiveTimestamp *time.Time `json:"price_change_effective_timestamp,omitempty"`
 }
 
 type ForecourtPrices struct {
@@ -72,13 +73,6 @@ type MetaData struct {
 	BatchSize    int  `json:"batch_size"`
 	TotalBatches int  `json:"total_batches"`
 	Cached       bool `json:"cached"`
-}
-
-type ForecourtPricesResponse struct {
-	Success  bool              `json:"success"`
-	Data     []ForecourtPrices `json:"data"`
-	Message  string            `json:"message,omitempty"`
-	MetaData MetaData          `json:"metadata"`
 }
 
 func (pfs *PetrolFillingStation) ToTuple() []any {
@@ -116,6 +110,7 @@ func (fp *FuelPrice) ToTuple(nodeId string) []any {
 		fp.FuelType,
 		fp.PriceLastUpdated,
 		fp.Price,
+		fp.PriceChangeEffectiveTimestamp,
 	}
 }
 

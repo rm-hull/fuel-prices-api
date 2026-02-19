@@ -50,6 +50,11 @@ func ApiServer(dbPath string, port int, debug bool) {
 		}
 	}()
 
+	err = internal.Migrate("migrations", dbPath)
+	if err != nil {
+		log.Fatalf("failed to migrate SQL: %v", err)
+	}
+
 	repo := internal.NewFuelPricesRepository(db)
 	if _, err := internal.StartCron(client, repo); err != nil {
 		log.Fatalf("failed to start CRON jobs: %v", err)

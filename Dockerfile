@@ -31,6 +31,7 @@ WORKDIR /app
 COPY --from=build /app/fuel-prices .
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=build /usr/share/zoneinfo /usr/share/zoneinfo
+COPY migrations/ /app/migrations/
 
 USER appuser
 EXPOSE 8080/tcp

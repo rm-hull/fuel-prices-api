@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -10,9 +11,23 @@ import (
 )
 
 func setupTestDB(t *testing.T) FuelPricesRepository {
-	db, err := Connect(":memory:")
+	tmpFile, err := os.CreateTemp("", "fuel_prices_test-*.db")
+	require.NoError(t, err)
+	dbPath := tmpFile.Name()
+	_ = tmpFile.Close()
+
+	db, err := Connect(dbPath)
 	require.NoError(t, err)
 	db.SetMaxOpenConns(1)
+
+	err = Migrate("../migrations", dbPath)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+		_ = os.Remove(dbPath)
+	})
+	
 	return NewFuelPricesRepository(db)
 }
 

@@ -3,8 +3,6 @@
 
 PRAGMA foreign_keys = ON;
 
-BEGIN TRANSACTION;
-
 -- Stations table (maps to PetrolFillingStation)
 CREATE TABLE IF NOT EXISTS petrol_filling_stations (
     node_id TEXT PRIMARY KEY,
@@ -43,6 +41,3 @@ CREATE TABLE IF NOT EXISTS fuel_prices (
     PRIMARY KEY (node_id, fuel_type, price_last_updated),
     FOREIGN KEY (node_id) REFERENCES petrol_filling_stations(node_id) ON DELETE CASCADE
 );
-
-
-COMMIT;

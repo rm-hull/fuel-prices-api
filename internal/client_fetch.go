@@ -80,54 +80,26 @@ func (mgr *fuelPricesManager) LastUpdated() *time.Time {
 }
 
 func (mgr *fuelPricesManager) GetFuelPrices(callback BatchCallback[models.ForecourtPrices]) (int, error) {
-	decode := func(body io.ReadCloser, batchNo int) ([]models.ForecourtPrices, int, error) {
-		bodyBytes, err := io.ReadAll(body)
-		if err != nil {
-			return nil, 0, fmt.Errorf("failed to read response body: %w", err)
+	decode := func(body io.ReadCloser, batchNo int) ([]models.ForecourtPrices, error) {
+		var resp []models.ForecourtPrices
+		decoder := json.NewDecoder(body)
+		if err := decoder.Decode(&resp); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 		}
-
-		// The GOV.UK API intermittently returns an array of forecourt prices instead of the expected
-		// object with metadata. To handle this gracefully, we check the first byte of the response.
-		// If it's an array, we treat it as a single batch with all records and log a warning. Otherwise,
-		// we proceed with normal unmarshalling. FISH!
-		var resp models.ForecourtPricesResponse
-		if bodyBytes[0] == '[' {
-			var forecourtPrices []models.ForecourtPrices
-			if err := json.Unmarshal(bodyBytes, &forecourtPrices); err != nil {
-				return nil, 0, fmt.Errorf("failed to unmarshal response: %w", err)
-			}
-			resp.Success = true
-			resp.Data = forecourtPrices
-			resp.MetaData = models.MetaData{
-				TotalBatches: batchNo + 2,
-				BatchNumber:  batchNo,
-				BatchSize:    len(forecourtPrices),
-			}
-			log.Printf("WARNING: API returned an array instead of the expected object, treating as a single batch with %d records", len(forecourtPrices))
-		} else {
-			if err := json.Unmarshal(bodyBytes, &resp); err != nil {
-				return nil, 0, fmt.Errorf("failed to unmarshal response: %w", err)
-			}
-		}
-
-		if !resp.Success {
-			return nil, 0, fmt.Errorf("API error: %s", resp.Message)
-		}
-
-		return resp.Data, resp.MetaData.TotalBatches, nil
+		return resp, nil
 	}
 
 	return fetchBatched(mgr, "pfs/fuel-prices", &mgr.timeTracker.lastPricesFetch, decode, callback)
 }
 
 func (mgr *fuelPricesManager) GetFillingStations(callback BatchCallback[models.PetrolFillingStation]) (int, error) {
-	decode := func(body io.ReadCloser, batchNo int) ([]models.PetrolFillingStation, int, error) {
+	decode := func(body io.ReadCloser, batchNo int) ([]models.PetrolFillingStation, error) {
 		var resp []models.PetrolFillingStation
 		decoder := json.NewDecoder(body)
 		if err := decoder.Decode(&resp); err != nil {
-			return nil, 0, fmt.Errorf("failed to unmarshal response: %w", err)
+			return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 		}
-		return resp, 0, nil // No total batches info available for PFS
+		return resp, nil
 	}
 
 	return fetchBatched(mgr, "pfs", &mgr.timeTracker.lastPfsFetch, decode, callback)
@@ -212,7 +184,7 @@ func fetchBatched[T any](
 	mgr *fuelPricesManager,
 	path string,
 	lastFetch *time.Time,
-	decode func(io.ReadCloser, int) ([]T, int, error),
+	decode func(io.ReadCloser, int) ([]T, error),
 	callback BatchCallback[T],
 ) (int, error) {
 	if err := mgr.checkTokenExpiry(); err != nil {
@@ -244,7 +216,7 @@ func fetchBatched[T any](
 			return 0, err
 		}
 
-		data, totalBatches, err := decode(body, batchNo)
+		data, err := decode(body, batchNo)
 		if err != nil {
 			_ = body.Close()
 			return 0, err
@@ -258,7 +230,7 @@ func fetchBatched[T any](
 		count += numRecords
 		batchNo++
 
-		if numRecords == 0 || (totalBatches > 0 && batchNo > totalBatches) {
+		if numRecords == 0 {
 			break
 		}
 	}
