@@ -4,60 +4,35 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/Depado/ginprom"
 	"github.com/aurowora/compress"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/rm-hull/fuel-prices-api/internal"
 	"github.com/rm-hull/fuel-prices-api/internal/routes"
-	"github.com/rm-hull/godx"
 	healthcheck "github.com/tavsec/gin-healthcheck"
 	"github.com/tavsec/gin-healthcheck/checks"
 	hc_config "github.com/tavsec/gin-healthcheck/config"
 )
 
-func ApiServer(dbPath string, port int, debug bool) {
+func ApiServer(dbPath string, port int, debug bool) error {
 
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
-	}
-
-	godx.GitVersion()
-	godx.EnvironmentVars()
-	godx.UserInfo()
-
-	clientId := os.Getenv("CLIENT_ID")
-	clientSecret := os.Getenv("CLIENT_SECRET")
-
-	client, err := internal.NewFuelPricesClient(clientId, clientSecret)
+	client, repo, err := bootstrap(dbPath)
 	if err != nil {
-		log.Fatalf("GOV.UK authentication failed: %v\n", err)
-	}
-
-	db, err := internal.Connect(dbPath)
-	if err != nil {
-		log.Fatalf("failed to initialize database: %v", err)
+		return err
 	}
 	defer func() {
-		if err := db.Close(); err != nil {
-			log.Printf("error closing database: %v", err)
+		if err := repo.Close(); err != nil {
+			log.Printf("failed to close repository: %v", err)
 		}
 	}()
 
-	err = internal.Migrate("migrations", dbPath)
-	if err != nil {
-		log.Fatalf("failed to migrate SQL: %v", err)
-	}
-
-	repo := internal.NewFuelPricesRepository(db)
 	if _, err := internal.StartCron(client, repo); err != nil {
-		log.Fatalf("failed to start CRON jobs: %v", err)
+		return fmt.Errorf("failed to start CRON jobs: %w", err)
 	}
 
 	r := gin.New()
@@ -82,10 +57,10 @@ func ApiServer(dbPath string, port int, debug bool) {
 	}
 
 	err = healthcheck.New(r, hc_config.DefaultConfig(), []checks.Check{
-		checks.SqlCheck{Sql: db},
+		repo.Check(),
 	})
 	if err != nil {
-		log.Fatalf("failed to initialize healthcheck: %v", err)
+		return fmt.Errorf("failed to initialize healthcheck: %v", err)
 	}
 
 	v1 := r.Group("/v1/fuel-prices")
@@ -94,6 +69,8 @@ func ApiServer(dbPath string, port int, debug bool) {
 	addr := fmt.Sprintf(":%d", port)
 	log.Printf("Starting HTTP API Server on port %d...", port)
 	if err := r.Run(addr); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("HTTP API Server failed to start on port %d: %v", port, err)
+		return fmt.Errorf("HTTP API Server failed to start on port %d: %v", port, err)
 	}
+
+	return nil
 }

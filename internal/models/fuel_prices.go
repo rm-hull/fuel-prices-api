@@ -1,8 +1,8 @@
 package models
 
 import (
-	// "encoding/json"
 	"log"
+	"strings"
 	"time"
 
 	jsoniter "github.com/json-iterator/go"
@@ -89,7 +89,7 @@ func (pfs *PetrolFillingStation) ToTuple() []any {
 		pfs.PermanentClosureDate,
 		pfs.IsMotorwayServiceStation,
 		pfs.IsSupermarketServiceStation,
-		pfs.Location.AddressLine1,
+		cleanseAddressLine1(pfs.Location.AddressLine1, pfs.Location.City, pfs.Location.Postcode),
 		pfs.Location.AddressLine2,
 		pfs.Location.City,
 		pfs.Location.Country,
@@ -109,7 +109,7 @@ func (fp *FuelPrice) ToTuple(nodeId string) []any {
 		nodeId,
 		fp.FuelType,
 		fp.PriceLastUpdated,
-		fp.Price,
+		cleansePrice(fp.Price),
 		fp.PriceChangeEffectiveTimestamp,
 	}
 }
@@ -120,4 +120,34 @@ func toJSON(v any) string {
 		log.Fatalf("Error marshaling to JSON: %v", err)
 	}
 	return string(jsonBytes)
+}
+
+func cleanseAddressLine1(addressLine1, city, postcode string) string {
+	// The API sometime returns records with the address line 1 containing
+	// the full address, so we just tidy that before writing to the database.
+
+	suffixesToRemove := []string{
+		", " + city + ", " + postcode,
+		city + ", " + postcode,
+		", " + postcode,
+		postcode,
+	}
+
+	for _, suffix := range suffixesToRemove {
+		if strings.HasSuffix(addressLine1, suffix) {
+			addressLine1 = strings.Replace(addressLine1, suffix, "", 1)
+		}
+	}
+	return addressLine1
+}
+
+func cleansePrice(price float64) float64 {
+	// The API sometimes returns prices in pounds (rather than pence) or in tenths of pence
+	// (rather than pence), so we just adjust accordingly before writing to the database.
+	if price < 10 {
+		return price * 100
+	} else if price > 1000 {
+		return price / 10
+	}
+	return price
 }
