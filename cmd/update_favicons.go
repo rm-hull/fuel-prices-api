@@ -21,13 +21,13 @@ func UpdateFaviconsInCSV(csvFile string) error {
 	updated := make([]*models.Retailer, 0, len(retailers))
 	for idx, record := range retailers {
 
-		log.Printf("Processing record %d: %s", idx, record.Url)
+		log.Printf("Processing record %d: %s", idx, record.WebsiteUrl)
 
-		iconInfo, err := favicon.Extract(record.Url)
+		iconInfo, err := favicon.Extract(record.WebsiteUrl)
 		if err != nil {
-			log.Printf("failed to extract favicon for %s: %v", record.Url, err)
+			log.Printf("failed to extract favicon for %s: %v", record.WebsiteUrl, err)
 		} else {
-			record.Favicon = &iconInfo.Href
+			record.LogoUrl = &iconInfo.Href
 		}
 		updated = append(updated, record)
 	}

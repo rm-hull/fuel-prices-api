@@ -3,19 +3,19 @@ package models
 import "strings"
 
 type Retailer struct {
-	Name    string  `json:"name"`
-	Url     string  `json:"url"`
-	Favicon *string `json:"favicon,omitempty"`
+	Name       string  `json:"name"`
+	WebsiteUrl string  `json:"website_url"`
+	LogoUrl    *string `json:"logo_url,omitempty"`
 }
 
 func (org *Retailer) ToCSV() []string {
 	row := []string{
 		org.Name,
-		org.Url,
+		org.WebsiteUrl,
 		"",
 	}
-	if org.Favicon != nil {
-		row[2] = *org.Favicon
+	if org.LogoUrl != nil {
+		row[2] = *org.LogoUrl
 	}
 
 	return row
@@ -23,11 +23,11 @@ func (org *Retailer) ToCSV() []string {
 
 func FromCSV(record, headers []string) (*Retailer, error) {
 	retailer := &Retailer{
-		Name: record[0],
-		Url:  record[1],
+		Name:       record[0],
+		WebsiteUrl: record[1],
 	}
 	if len(record) == 3 && record[2] != "" {
-		retailer.Favicon = &record[2]
+		retailer.LogoUrl = &record[2]
 	}
 	return retailer, nil
 }
