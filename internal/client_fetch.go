@@ -209,7 +209,7 @@ func fetchBatched[T any](
 		body, err := mgr.get(url)
 		if err != nil {
 			var stErr *HTTPStatusError
-			if errors.As(err, &stErr) && stErr.StatusCode == 400 {
+			if errors.As(err, &stErr) && stErr.StatusCode == 404 {
 				log.Printf("No more batches available for %s, stopping at batch %d", path, batchNo-1)
 				break
 			}
