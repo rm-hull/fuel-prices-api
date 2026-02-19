@@ -11,6 +11,14 @@
             "mode": "auto",
             "program": "main.go",
             "args": ["api-server"]
+        },
+        {
+            "name": "Import",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "main.go",
+            "args": ["import"]
         }
     ]
 }

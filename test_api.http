@@ -26,3 +26,10 @@ Authorization: Bearer {{TOKEN}}
 
 ### Search fuel prices by bounding box
 GET http://localhost:8080/v1/fuel-prices/search?bbox=-1.6237,53.9458,-1.4258,54.0328&limit=5
+
+
+### Health check
+GET http://localhost:8080/healthz
+
+### Metrics
+GET http://localhost:8080/metrics

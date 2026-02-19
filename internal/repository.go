@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/rm-hull/fuel-prices-api/internal/models"
+	"github.com/tavsec/gin-healthcheck/checks"
 )
 
 //go:embed sql/insert_pfs.sql
@@ -26,6 +27,8 @@ type FuelPricesRepository interface {
 	InsertPFS(batch []models.PetrolFillingStation) (int, error)
 	InsertPrices(batch []models.ForecourtPrices) (int, error)
 	Search(boundingBox []float64, perTypeLimit int) ([]models.SearchResult, error)
+	Close() error
+	Check() checks.Check
 }
 
 type sqliteRepository struct {
@@ -36,6 +39,14 @@ func NewFuelPricesRepository(db *sql.DB) FuelPricesRepository {
 	return &sqliteRepository{
 		db: db,
 	}
+}
+
+func (repo *sqliteRepository) Close() error {
+	return repo.db.Close()
+}
+
+func (repo *sqliteRepository) Check() checks.Check {
+	return checks.SqlCheck{Sql: repo.db}
 }
 
 func (repo *sqliteRepository) InsertPFS(batch []models.PetrolFillingStation) (int, error) {
