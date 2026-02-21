@@ -40,6 +40,11 @@ func Derive(results []models.SearchResult, bucketSize int) *models.SearchStatist
 			}
 			fuelTypeStations[fuelType][price] = append(fuelTypeStations[fuelType][price], result.NodeId)
 		}
+
+		// Brand distribution - count results by retailer
+		if result.Retailer != nil {
+			stats.BrandDistribution[result.Retailer.Name]++
+		}
 	}
 
 	for fuelType, prices := range fuelTypePrices {
@@ -68,31 +73,23 @@ func Derive(results []models.SearchResult, bucketSize int) *models.SearchStatist
 		avgPrice := sum / float64(len(prices))
 		stats.AveragePrice[fuelType] = math.Round(avgPrice*10) / 10
 
-		// Standard deviation
-		if len(prices) > 1 {
-			variance := 0.0
-			for _, p := range prices {
-				diff := p - avgPrice
-				variance += diff * diff
-			}
-			variance /= float64(len(prices))
-			stats.StandardDeviation[fuelType] = math.Sqrt(variance)
-		}
-
+		// Standard deviation and Price Distribution
 		stats.PriceDistribution[fuelType] = make(map[string]int)
+		variance := 0.0
 		for _, p := range prices {
+			diff := p - avgPrice
+			variance += diff * diff
+
 			price := int(p)
 			bucketStart := (price / bucketSize) * bucketSize
 			bucketEnd := bucketStart + bucketSize - 1
 			bucketKey := fmt.Sprintf("%d-%d", bucketStart, bucketEnd)
 			stats.PriceDistribution[fuelType][bucketKey]++
 		}
-	}
 
-	// Brand distribution - count results by retailer
-	for _, result := range results {
-		if result.Retailer != nil {
-			stats.BrandDistribution[result.Retailer.Name]++
+		if len(prices) > 1 {
+			variance /= float64(len(prices))
+			stats.StandardDeviation[fuelType] = math.Sqrt(variance)
 		}
 	}
 
