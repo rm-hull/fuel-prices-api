@@ -10,7 +10,7 @@
             "request": "launch",
             "mode": "auto",
             "program": "main.go",
-            "args": ["api-server"]
+            "args": ["api-server", "--debug"]
         },
         {
             "name": "Import",
