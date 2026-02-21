@@ -131,7 +131,7 @@ func TestFetchPricesIntegration(t *testing.T) {
 
 		// Expected E10 prices:
 		// 1. 141.9 at now
-		// 2. 142.9 at now-3h (now-1h and now-2h are both skipped because they're same as now-3h)
+		// 2. 142.9 at now-1h (now-2h and now-3h are both skipped because they're same as now-1h)
 		// 3. 140.9 at now-4h
 		assert.Len(t, p["E10"], 3)
 		assert.Equal(t, 141.9, p["E10"][0].Price)
@@ -139,7 +139,7 @@ func TestFetchPricesIntegration(t *testing.T) {
 		assert.Equal(t, 140.9, p["E10"][2].Price)
 
 		assert.True(t, p["E10"][0].UpdatedOn.Equal(now))
-		assert.True(t, p["E10"][1].UpdatedOn.Equal(now.Add(-3*time.Hour)))
+		assert.True(t, p["E10"][1].UpdatedOn.Equal(now.Add(-1*time.Hour)))
 		assert.True(t, p["E10"][2].UpdatedOn.Equal(now.Add(-4*time.Hour)))
 	})
 

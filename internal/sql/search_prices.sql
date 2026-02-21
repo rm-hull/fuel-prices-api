@@ -14,15 +14,30 @@ WITH filtered_prices AS (
   WHERE pfs.latitude BETWEEN ? AND ?
     AND pfs.longitude BETWEEN ? AND ?
 ),
+grouped AS (
+  SELECT
+    node_id,
+    fuel_type,
+    price,
+    price_change_effective_timestamp,
+    price_last_updated,
+      SUM(CASE WHEN price IS DISTINCT FROM prev_price THEN 1 ELSE 0 END)
+        OVER (PARTITION BY node_id, fuel_type ORDER BY price_last_updated ROWS UNBOUNDED PRECEDING) AS grp
+  FROM filtered_prices
+),
 price_changes AS (
+  -- For each run of identical prices pick the most recent row for that run
   SELECT
     node_id,
     fuel_type,
     price_last_updated,
     price,
     price_change_effective_timestamp
-  FROM filtered_prices
-  WHERE price IS DISTINCT FROM prev_price
+  FROM (
+    SELECT *, ROW_NUMBER() OVER (PARTITION BY node_id, fuel_type, grp ORDER BY price_last_updated DESC) AS rn
+    FROM grouped
+  ) t
+  WHERE rn = 1
 ),
 ranked_prices AS (
   SELECT
