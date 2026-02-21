@@ -72,7 +72,8 @@ func Derive(results []models.SearchResult, bucketSize int) *models.SearchStatist
 		if len(prices) > 1 {
 			variance := 0.0
 			for _, p := range prices {
-				variance += math.Pow(p-avgPrice, 2)
+				diff := p - avgPrice
+				variance += diff * diff
 			}
 			variance /= float64(len(prices))
 			stats.StandardDeviation[fuelType] = math.Sqrt(variance)
