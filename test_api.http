@@ -25,7 +25,7 @@ GET https://www.fuel-finder.service.gov.uk/api/v1/pfs?batch-number=1
 Authorization: Bearer {{TOKEN}}
 
 ### Search fuel prices by bounding box
-GET http://localhost:8080/v1/fuel-prices/search?bbox=-1.6237,53.9458,-1.4258,54.0328&limit=5
+GET http://localhost:8080/v1/fuel-prices/search?bbox=-1.956,53.598,-1.243,53.948&limit=5
 
 
 ### Health check

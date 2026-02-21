@@ -10,6 +10,7 @@ import (
 
 	"github.com/rm-hull/fuel-prices-api/internal"
 	"github.com/rm-hull/fuel-prices-api/internal/models"
+	"github.com/rm-hull/fuel-prices-api/internal/stats"
 
 	"github.com/gin-gonic/gin"
 )
@@ -46,6 +47,7 @@ func Search(repo internal.FuelPricesRepository, client internal.FuelPricesClient
 		c.JSON(http.StatusOK, models.SearchResponse{
 			Results:     results,
 			Attribution: internal.ATTRIBUTION,
+			Statistics:  stats.Derive(results, 3),
 			LastUpdated: client.LastUpdated(),
 		})
 	}
