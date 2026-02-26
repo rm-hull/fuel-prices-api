@@ -22,10 +22,11 @@ type HTTPStatusError struct {
 	URL        string
 	Status     string
 	StatusCode int
+	Body	   string
 }
 
 func (e *HTTPStatusError) Error() string {
-	return fmt.Sprintf("http status response from %s: %s", e.URL, e.Status)
+	return fmt.Sprintf("http status response from %s: %s, body: %s", e.URL, e.Status, e.Body)
 }
 
 type BatchCallback[T any] func([]T) (int, error)
@@ -254,9 +255,15 @@ func (mgr *fuelPricesManager) get(url string) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("failed to fetch from %s: %w", url, err)
 	}
 
-	if resp.StatusCode > 299 {
+	if resp.StatusCode >= http.StatusBadRequest {
+		bodyBytes, _ := io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
-		return nil, &HTTPStatusError{URL: url, Status: resp.Status, StatusCode: resp.StatusCode}
+		return nil, &HTTPStatusError{
+			URL: url,
+			Status: resp.Status,
+			StatusCode: resp.StatusCode,
+			Body: string(bodyBytes),
+		}
 	}
 	return resp.Body, nil
 }
@@ -280,9 +287,15 @@ func (mgr *fuelPricesManager) post(url, contentType string, data any) (io.ReadCl
 		return nil, fmt.Errorf("failed to perform request: %w", err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode >= http.StatusBadRequest {
+		bodyBytes, _ := io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return nil, &HTTPStatusError{
+			URL: url,
+			Status: resp.Status,
+			StatusCode: resp.StatusCode,
+			Body: string(bodyBytes),
+		}
 	}
 
 	return resp.Body, nil
