@@ -23,7 +23,7 @@ type HTTPStatusError struct {
 	URL        string
 	Status     string
 	StatusCode int
-	Body	   string
+	Body       string
 }
 
 func (e *HTTPStatusError) Error() string {
@@ -278,12 +278,12 @@ func (mgr *fuelPricesManager) get(url string) (io.ReadCloser, error) {
 			bodyBytes = fmt.Appendf(nil, "<failed to read body: %v>", readErr)
 		}
 		_ = resp.Body.Close()
-		
+
 		return nil, &HTTPStatusError{
-			URL: url,
-			Status: resp.Status,
+			URL:        url,
+			Status:     resp.Status,
 			StatusCode: resp.StatusCode,
-			Body: string(bodyBytes),
+			Body:       string(bodyBytes),
 		}
 	}
 	return resp.Body, nil
@@ -316,10 +316,10 @@ func (mgr *fuelPricesManager) post(url, contentType string, data any) (io.ReadCl
 		_ = resp.Body.Close()
 
 		return nil, &HTTPStatusError{
-			URL: url,
-			Status: resp.Status,
+			URL:        url,
+			Status:     resp.Status,
 			StatusCode: resp.StatusCode,
-			Body: string(bodyBytes),
+			Body:       string(bodyBytes),
 		}
 	}
 
