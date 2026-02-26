@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 
 	// neturl "net/url"
 	"time"
@@ -22,10 +23,27 @@ type HTTPStatusError struct {
 	URL        string
 	Status     string
 	StatusCode int
+	Body       string
 }
 
 func (e *HTTPStatusError) Error() string {
-	return fmt.Sprintf("http status response from %s: %s", e.URL, e.Status)
+	if e == nil {
+		return "http status error: <nil>"
+	}
+
+	body := e.Body
+	// sanitize newlines and tabs so logs remain single-line
+	body = strings.ReplaceAll(body, "\n", "\\n")
+	body = strings.ReplaceAll(body, "\r", "\\r")
+	body = strings.ReplaceAll(body, "\t", "\\t")
+
+	// truncate very large bodies to avoid excessive log sizes
+	const maxBody = 1000
+	if len(body) > maxBody {
+		body = body[:maxBody] + "...(truncated)"
+	}
+
+	return fmt.Sprintf("http status response from %s: %s, body: %s", e.URL, e.Status, body)
 }
 
 type BatchCallback[T any] func([]T) (int, error)
@@ -254,9 +272,19 @@ func (mgr *fuelPricesManager) get(url string) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("failed to fetch from %s: %w", url, err)
 	}
 
-	if resp.StatusCode > 299 {
+	if resp.StatusCode >= http.StatusBadRequest {
+		bodyBytes, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			bodyBytes = fmt.Appendf(nil, "<failed to read body: %v>", readErr)
+		}
 		_ = resp.Body.Close()
-		return nil, &HTTPStatusError{URL: url, Status: resp.Status, StatusCode: resp.StatusCode}
+
+		return nil, &HTTPStatusError{
+			URL:        url,
+			Status:     resp.Status,
+			StatusCode: resp.StatusCode,
+			Body:       string(bodyBytes),
+		}
 	}
 	return resp.Body, nil
 }
@@ -280,9 +308,19 @@ func (mgr *fuelPricesManager) post(url, contentType string, data any) (io.ReadCl
 		return nil, fmt.Errorf("failed to perform request: %w", err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode >= http.StatusBadRequest {
+		bodyBytes, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			bodyBytes = fmt.Appendf(nil, "<failed to read body: %v>", readErr)
+		}
 		_ = resp.Body.Close()
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+
+		return nil, &HTTPStatusError{
+			URL:        url,
+			Status:     resp.Status,
+			StatusCode: resp.StatusCode,
+			Body:       string(bodyBytes),
+		}
 	}
 
 	return resp.Body, nil
