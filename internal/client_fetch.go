@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 
 	// neturl "net/url"
 	"time"
@@ -26,7 +27,23 @@ type HTTPStatusError struct {
 }
 
 func (e *HTTPStatusError) Error() string {
-	return fmt.Sprintf("http status response from %s: %s, body: %s", e.URL, e.Status, e.Body)
+	if e == nil {
+		return "http status error: <nil>"
+	}
+
+	body := e.Body
+	// sanitize newlines and tabs so logs remain single-line
+	body = strings.ReplaceAll(body, "\n", "\\n")
+	body = strings.ReplaceAll(body, "\r", "\\r")
+	body = strings.ReplaceAll(body, "\t", "\\t")
+
+	// truncate very large bodies to avoid excessive log sizes
+	const maxBody = 1000
+	if len(body) > maxBody {
+		body = body[:maxBody] + "...(truncated)"
+	}
+
+	return fmt.Sprintf("http status response from %s: %s, body: %s", e.URL, e.Status, body)
 }
 
 type BatchCallback[T any] func([]T) (int, error)
@@ -256,8 +273,12 @@ func (mgr *fuelPricesManager) get(url string) (io.ReadCloser, error) {
 	}
 
 	if resp.StatusCode >= http.StatusBadRequest {
-		bodyBytes, _ := io.ReadAll(resp.Body)
+		bodyBytes, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			bodyBytes = fmt.Appendf(nil, "<failed to read body: %v>", readErr)
+		}
 		_ = resp.Body.Close()
+		
 		return nil, &HTTPStatusError{
 			URL: url,
 			Status: resp.Status,
@@ -288,8 +309,12 @@ func (mgr *fuelPricesManager) post(url, contentType string, data any) (io.ReadCl
 	}
 
 	if resp.StatusCode >= http.StatusBadRequest {
-		bodyBytes, _ := io.ReadAll(resp.Body)
+		bodyBytes, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			bodyBytes = fmt.Appendf(nil, "<failed to read body: %v>", readErr)
+		}
 		_ = resp.Body.Close()
+
 		return nil, &HTTPStatusError{
 			URL: url,
 			Status: resp.Status,
