@@ -43,7 +43,7 @@ func (e *HTTPStatusError) Error() string {
 		body = body[:maxBody] + "...(truncated)"
 	}
 
-	return fmt.Sprintf("http status response from %s: %s, body: %s", e.URL, e.Status, body)
+	return fmt.Sprintf("unexpected http response (%s) from %s, body: %s", e.Status, e.URL, body)
 }
 
 type BatchCallback[T any] func([]T) (int, error)
