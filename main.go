@@ -14,6 +14,7 @@ func main() {
 	var filePath string
 	var port int
 	var debug bool
+	var fullRefresh bool
 
 	rootCmd := &cobra.Command{
 		Use:  "fuel-prices",
@@ -24,7 +25,7 @@ func main() {
 		Use:   "api-server [--db <path>] [--port <port>] [--debug]",
 		Short: "Start HTTP API server",
 		Run: func(_ *cobra.Command, _ []string) {
-			if err = cmd.ApiServer(dbPath, port, debug); err != nil {
+			if err = cmd.ApiServer(dbPath, port, fullRefresh, debug); err != nil {
 				log.Fatalf("API Server failed: %v", err)
 			}
 		},
@@ -53,6 +54,7 @@ func main() {
 
 	apiServerCmd.Flags().IntVar(&port, "port", 8080, "Port to run HTTP server on")
 	apiServerCmd.Flags().BoolVar(&debug, "debug", false, "Enable debugging (pprof) - WARING: do not enable in production")
+	apiServerCmd.Flags().BoolVar(&fullRefresh, "full-refresh", false, "if set, always fetch all PFS and fuel prices, else only fetch updated stations/prices since last successful fetch")
 
 	rootCmd.AddCommand(apiServerCmd)
 	rootCmd.AddCommand(importCmd)
