@@ -15,7 +15,7 @@ import (
 // bootstrap initialises shared resources used by both the API server and import
 // commands. It returns the authenticated client, a repository, and an error
 // if something failed during startup.
-func bootstrap(dbPath string) (internal.FuelPricesClient, internal.FuelPricesRepository, error) {
+func bootstrap(dbPath string, fullRefresh bool) (internal.FuelPricesClient, internal.FuelPricesRepository, error) {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
@@ -27,7 +27,7 @@ func bootstrap(dbPath string) (internal.FuelPricesClient, internal.FuelPricesRep
 	clientId := os.Getenv("CLIENT_ID")
 	clientSecret := os.Getenv("CLIENT_SECRET")
 
-	client, err := internal.NewFuelPricesClient(clientId, clientSecret)
+	client, err := internal.NewFuelPricesClient(clientId, clientSecret, fullRefresh)
 	if err != nil {
 		return nil, nil, fmt.Errorf("GOV.UK authentication failed: %w", err)
 	}

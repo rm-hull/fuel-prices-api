@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	neturl "net/url"
 	"strings"
 
 	// neturl "net/url"
@@ -69,15 +70,17 @@ type fuelPricesManager struct {
 	timeTracker timeTracker
 	client      *http.Client
 	metrics     *ClientFetchMetrics
+	fullRefresh bool
 }
 
-func NewFuelPricesClient(clientId, clientSecret string) (FuelPricesClient, error) {
+func NewFuelPricesClient(clientId, clientSecret string, fullRefresh bool) (FuelPricesClient, error) {
 	mgr := &fuelPricesManager{
 		baseUrl: "https://www.fuel-finder.service.gov.uk/api/v1",
 		timeTracker: timeTracker{
 			started: time.Now(),
 		},
-		client: &http.Client{},
+		fullRefresh: fullRefresh,
+		client:      &http.Client{},
 		authReq: models.AuthRequest{
 			ClientId:     clientId,
 			ClientSecret: clientSecret,
@@ -201,6 +204,16 @@ func (mgr *fuelPricesManager) checkTokenExpiry() error {
 	return nil
 }
 
+func (mgr *fuelPricesManager) getEffectiveStartTimestamp(path string, lastFetch *time.Time) string {
+
+	if lastFetch.IsZero() || mgr.fullRefresh {
+		return ""
+	}
+
+	log.Printf("Time since last fetch for %s: %s", path, time.Since(*lastFetch))
+	return lastFetch.Format("2006-01-02 15:04:05") // Not quite RFC3339 ...
+}
+
 func fetchBatched[T any](
 	mgr *fuelPricesManager,
 	path string,
@@ -216,17 +229,13 @@ func fetchBatched[T any](
 	count := 0
 
 	startTime := time.Now()
-	// effectiveStartTimestamp := ""
-	// if !lastFetch.IsZero() {
-	// 	log.Printf("Time since last fetch for %s: %s", path, time.Since(*lastFetch))
-	// 	effectiveStartTimestamp = lastFetch.Format("2006-01-02 15:04:05") // Not quite RFC3339 ...
-	// }
+	effectiveStartTimestamp := mgr.getEffectiveStartTimestamp(path, lastFetch)
 
 	for {
 		url := fmt.Sprintf("%s/%s?batch-number=%d", mgr.baseUrl, path, batchNo)
-		// if effectiveStartTimestamp != "" {
-		// 	url += "&effective-start-timestamp=" + neturl.QueryEscape(effectiveStartTimestamp)
-		// }
+		if effectiveStartTimestamp != "" {
+			url += "&effective-start-timestamp=" + neturl.QueryEscape(effectiveStartTimestamp)
+		}
 		body, err := mgr.get(url)
 		if err != nil {
 			var stErr *HTTPStatusError
