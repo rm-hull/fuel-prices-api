@@ -13,6 +13,7 @@ import (
 	"time"
 
 	jsoniter "github.com/json-iterator/go"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rm-hull/fuel-prices-api/internal/models"
 )
 
@@ -67,6 +68,7 @@ type fuelPricesManager struct {
 	tokenData   models.TokenData
 	timeTracker timeTracker
 	client      *http.Client
+	metrics     *ClientFetchMetrics
 }
 
 func NewFuelPricesClient(clientId, clientSecret string) (FuelPricesClient, error) {
@@ -80,6 +82,7 @@ func NewFuelPricesClient(clientId, clientSecret string) (FuelPricesClient, error
 			ClientId:     clientId,
 			ClientSecret: clientSecret,
 		},
+		metrics: NewClientFetchMetrics(prometheus.DefaultRegisterer),
 	}
 
 	err := mgr.authenticate()
@@ -245,6 +248,7 @@ func fetchBatched[T any](
 		if err != nil {
 			return 0, fmt.Errorf("callback error: %w", err)
 		}
+		mgr.metrics.RecordFetchedItems(path, numRecords)
 		count += numRecords
 		batchNo++
 
@@ -258,7 +262,7 @@ func fetchBatched[T any](
 }
 
 func (mgr *fuelPricesManager) get(url string) (io.ReadCloser, error) {
-
+	start := time.Now()
 	log.Printf("GET %s", url)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -268,6 +272,8 @@ func (mgr *fuelPricesManager) get(url string) (io.ReadCloser, error) {
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := mgr.client.Do(req)
+	mgr.metrics.RecordHttpCall(start, "GET", url, resp, err)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch from %s: %w", url, err)
 	}
@@ -290,7 +296,7 @@ func (mgr *fuelPricesManager) get(url string) (io.ReadCloser, error) {
 }
 
 func (mgr *fuelPricesManager) post(url, contentType string, data any) (io.ReadCloser, error) {
-
+	start := time.Now()
 	log.Printf("POST %s", url)
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -304,6 +310,8 @@ func (mgr *fuelPricesManager) post(url, contentType string, data any) (io.ReadCl
 	req.Header.Set("Content-Type", contentType)
 
 	resp, err := mgr.client.Do(req)
+	mgr.metrics.RecordHttpCall(start, "POST", url, resp, err)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to perform request: %w", err)
 	}
