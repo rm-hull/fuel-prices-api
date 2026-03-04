@@ -248,6 +248,7 @@ func fetchBatched[T any](
 		if err != nil {
 			return 0, fmt.Errorf("callback error: %w", err)
 		}
+		mgr.metrics.RecordFetchedItems(path, numRecords)
 		count += numRecords
 		batchNo++
 
@@ -271,7 +272,7 @@ func (mgr *fuelPricesManager) get(url string) (io.ReadCloser, error) {
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := mgr.client.Do(req)
-	mgr.metrics.Record(start, "GET", url, resp.StatusCode, err)
+	mgr.metrics.RecordHttpCall(start, "GET", url, resp, err)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch from %s: %w", url, err)
@@ -309,7 +310,7 @@ func (mgr *fuelPricesManager) post(url, contentType string, data any) (io.ReadCl
 	req.Header.Set("Content-Type", contentType)
 
 	resp, err := mgr.client.Do(req)
-	mgr.metrics.Record(start, "POST", url, resp.StatusCode, err)
+	mgr.metrics.RecordHttpCall(start, "POST", url, resp, err)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to perform request: %w", err)

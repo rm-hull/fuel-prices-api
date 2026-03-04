@@ -1,7 +1,9 @@
 package internal
 
 import (
+	"log"
 	"math"
+	"net/http"
 	"net/url"
 	"strconv"
 	"time"
@@ -12,6 +14,7 @@ import (
 type ClientFetchMetrics struct {
 	ResponseLatency    *prometheus.HistogramVec
 	ResponseStatusCode *prometheus.CounterVec
+	ItemsFetchedTotal  *prometheus.CounterVec
 }
 
 func NewClientFetchMetrics(reg prometheus.Registerer) *ClientFetchMetrics {
@@ -31,22 +34,41 @@ func NewClientFetchMetrics(reg prometheus.Registerer) *ClientFetchMetrics {
 			},
 			[]string{"path", "method", "status_code"},
 		),
+		ItemsFetchedTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "fuel_prices_govuk_api_items_fetched_total",
+				Help: "GOV.UK fuel finder client API total number of items fetched from the upstream API.",
+			},
+			[]string{"path"},
+		),
 	}
 
 	if reg != nil {
 		reg.MustRegister(m.ResponseLatency)
 		reg.MustRegister(m.ResponseStatusCode)
+		reg.MustRegister(m.ItemsFetchedTotal)
 	}
 
 	return m
 }
 
-func (m *ClientFetchMetrics) Record(start time.Time, method, endpoint string, statusCode int, err error) {
+func (m *ClientFetchMetrics) RecordHttpCall(start time.Time, method, endpoint string, resp *http.Response, err error) {
 	if m != nil {
-		u, _ := url.Parse(endpoint)
-		m.ResponseLatency.WithLabelValues(u.Path, method).Observe(time.Since(start).Seconds())
-		if err == nil {
-			m.ResponseStatusCode.WithLabelValues(u.Path, method, strconv.Itoa(statusCode)).Inc()
+		u, parseErr := url.Parse(endpoint)
+		path := u.Path
+		if parseErr != nil {
+			log.Printf("failed to parse endpoint URL '%s' for metrics: %v", endpoint, parseErr)
+			path = "invalid_url"
 		}
+		m.ResponseLatency.WithLabelValues(path, method).Observe(time.Since(start).Seconds())
+		if err == nil {
+			m.ResponseStatusCode.WithLabelValues(path, method, strconv.Itoa(resp.StatusCode)).Inc()
+		}
+	}
+}
+
+func (m *ClientFetchMetrics) RecordFetchedItems(path string, count int) {
+	if m != nil && count > 0 {
+		m.ItemsFetchedTotal.WithLabelValues(path).Add(float64(count))
 	}
 }
