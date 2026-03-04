@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	neturl "net/url"
+	"strconv"
 	"strings"
 
 	// neturl "net/url"
@@ -232,10 +233,12 @@ func fetchBatched[T any](
 	effectiveStartTimestamp := mgr.getEffectiveStartTimestamp(path, lastFetch)
 
 	for {
-		url := fmt.Sprintf("%s/%s?batch-number=%d", mgr.baseUrl, path, batchNo)
+		params := neturl.Values{}
+		params.Add("batch-number", strconv.Itoa(batchNo))
 		if effectiveStartTimestamp != "" {
-			url += "&effective-start-timestamp=" + neturl.QueryEscape(effectiveStartTimestamp)
+			params.Add("effective-start-timestamp", effectiveStartTimestamp)
 		}
+		url := fmt.Sprintf("%s/%s?%s", mgr.baseUrl, path, params.Encode())
 		body, err := mgr.get(url)
 		if err != nil {
 			var stErr *HTTPStatusError
