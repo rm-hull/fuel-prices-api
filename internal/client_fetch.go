@@ -206,7 +206,7 @@ func (mgr *fuelPricesManager) checkTokenExpiry() error {
 
 func (mgr *fuelPricesManager) getEffectiveStartTimestamp(path string, lastFetch *time.Time) string {
 
-	if lastFetch.IsZero() || mgr.fullRefresh {
+	if lastFetch == nil || lastFetch.IsZero() || mgr.fullRefresh {
 		return ""
 	}
 
