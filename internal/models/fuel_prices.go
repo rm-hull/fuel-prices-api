@@ -94,7 +94,7 @@ func (pfs *PetrolFillingStation) ToTuple() []any {
 		pfs.Location.City,
 		pfs.Location.Country,
 		pfs.Location.County,
-		pfs.Location.Postcode,
+		strings.ToUpper(pfs.Location.Postcode),
 		pfs.Location.Latitude,
 		pfs.Location.Longitude,
 		toJSON(pfs.OpeningTimes),

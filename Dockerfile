@@ -16,7 +16,7 @@ COPY . .
 ENV CGO_ENABLED=1
 ENV GOOS=linux
 
-RUN go build -tags=jsoniter -ldflags="-w -s" -o fuel-prices .
+RUN go build -tags="jsoniter sqlite_math_functions" -ldflags="-w -s" -o fuel-prices .
 
 FROM alpine:latest AS runtime
 ENV GIN_MODE=release
