@@ -1,1 +1,1 @@
-DROP VIEW IF EXISTS daily_fuel_price_stats;
+DROP VIEW IF EXISTS fuel_price_snapshot_stats;
