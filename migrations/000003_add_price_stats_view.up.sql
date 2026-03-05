@@ -19,6 +19,7 @@ with_postcode_area AS (
     SELECT
         fuel_type,
         price,
+        -- Extracts the postcode area, which is the initial alphabetic part of the postcode (e.g., 'LS' from 'LS1 1AA').
         UPPER(SUBSTR(TRIM(postcode), 1, LENGTH(TRIM(postcode)) - LENGTH(LTRIM(TRIM(postcode), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')))) as postcode_area
     FROM latest_snapshot
 ),
@@ -46,6 +47,7 @@ postcode_area_stats AS (
         SQRT(MAX(0, AVG(price * price) - AVG(price) * AVG(price))) as stddev_price,
         COUNT(*) as sample_size
     FROM with_postcode_area
+    WHERE postcode_area IS NOT NULL AND postcode_area <> ''
     GROUP BY postcode_area, fuel_type
 )
 SELECT * FROM national_stats
