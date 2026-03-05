@@ -11,6 +11,13 @@ GROUP BY node_id, fuel_type
 HAVING COUNT(*) > 1;
 ```
 
+### Running Tests
+
+```console
+go test ./... -tags="jsoniter sqlite_math_functions"
+```
+
+
 ## References
 
 * https://www.developer.fuel-finder.service.gov.uk/public-api

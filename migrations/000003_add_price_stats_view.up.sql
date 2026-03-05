@@ -1,7 +1,7 @@
-DROP VIEW IF EXISTS daily_fuel_price_stats;
-CREATE VIEW daily_fuel_price_stats AS
-WITH latest_prices_today AS (
-    -- Filter for prices updated today and pick the latest for each (node_id, fuel_type)
+DROP VIEW IF EXISTS fuel_price_snapshot_stats;
+CREATE VIEW fuel_price_snapshot_stats AS
+WITH latest_prices_raw AS (
+    -- Pick the latest record for each (node_id, fuel_type) pair
     SELECT
         fp.node_id,
         fp.fuel_type,
@@ -10,10 +10,9 @@ WITH latest_prices_today AS (
         ROW_NUMBER() OVER (PARTITION BY fp.node_id, fp.fuel_type ORDER BY fp.price_last_updated DESC) as rn
     FROM fuel_prices fp
     JOIN petrol_filling_stations pfs ON fp.node_id = pfs.node_id
-    WHERE DATE(fp.price_last_updated) = DATE('now')
 ),
-latest_today AS (
-    SELECT * FROM latest_prices_today WHERE rn = 1
+latest_snapshot AS (
+    SELECT * FROM latest_prices_raw WHERE rn = 1
 ),
 with_postcode_area AS (
     -- Extract the postcode area (the leading alphabetic characters)
@@ -21,7 +20,7 @@ with_postcode_area AS (
         fuel_type,
         price,
         UPPER(SUBSTR(TRIM(postcode), 1, LENGTH(TRIM(postcode)) - LENGTH(LTRIM(TRIM(postcode), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')))) as postcode_area
-    FROM latest_today
+    FROM latest_snapshot
 ),
 national_stats AS (
     SELECT
