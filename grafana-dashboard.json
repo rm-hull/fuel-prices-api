@@ -18,9 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
   "links": [],
-  "liveNow": false,
   "panels": [
     {
       "datasource": {
@@ -39,6 +37,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -55,6 +54,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -70,7 +70,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "red",
@@ -97,11 +97,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "title": "Upstream API Latency (P50, P90, P99)",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -123,7 +124,6 @@
           "editorMode": "code",
           "expr": "histogram_quantile(0.90, sum by (le, path) (rate(fuel_prices_govuk_api_http_response_latency_seconds_bucket[$__rate_interval])))",
           "format": "time_series",
-          "hide": false,
           "legendFormat": "P90 - {{path}}",
           "range": true,
           "refId": "P90"
@@ -136,12 +136,12 @@
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, sum by (le, path) (rate(fuel_prices_govuk_api_http_response_latency_seconds_bucket[$__rate_interval])))",
           "format": "time_series",
-          "hide": false,
           "legendFormat": "P99 - {{path}}",
           "range": true,
           "refId": "P99"
         }
       ],
+      "title": "Upstream API Latency (P50, P90, P99)",
       "type": "timeseries"
     },
     {
@@ -161,6 +161,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "bars",
             "fillOpacity": 80,
             "gradientMode": "none",
@@ -177,6 +178,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -192,7 +194,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "red",
@@ -265,11 +267,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "title": "Upstream API Call Status Codes",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -284,6 +287,7 @@
           "refId": "A"
         }
       ],
+      "title": "Upstream API Call Status Codes",
       "type": "timeseries"
     },
     {
@@ -303,8 +307,9 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 50,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -312,13 +317,14 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "stepBefore",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -333,12 +339,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
+                "color": "blue",
+                "value": 0
               }
             ]
           },
@@ -358,14 +360,15 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": false
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "title": "Fetched Fuel Prices (60m)",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -380,6 +383,7 @@
           "refId": "A"
         }
       ],
+      "title": "Fetched Fuel Prices",
       "type": "timeseries"
     },
     {
@@ -399,8 +403,9 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 50,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -408,13 +413,17 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "stepBefore",
+            "lineStyle": {
+              "fill": "solid"
+            },
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": true,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -430,7 +439,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "red",
@@ -453,15 +462,16 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
+          "placement": "right",
+          "showLegend": false
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "title": "Fetched PFS (6h)",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -476,6 +486,7 @@
           "refId": "A"
         }
       ],
+      "title": "Fetched PFS",
       "type": "timeseries"
     },
     {
@@ -495,6 +506,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -511,6 +523,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -526,7 +539,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "red",
@@ -553,11 +566,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "title": "API Server Requests (Gin)",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -572,12 +586,13 @@
           "refId": "A"
         }
       ],
+      "title": "API Server Requests (Gin)",
       "type": "timeseries"
     }
   ],
+  "preload": false,
   "refresh": "",
-  "schemaVersion": 38,
-  "style": "dark",
+  "schemaVersion": 42,
   "tags": [
     "fuel-prices-api"
   ],
@@ -585,20 +600,16 @@
     "list": [
       {
         "current": {
-          "selected": false,
-          "text": "Prometheus",
-          "value": "Prometheus"
+          "text": "prometheus",
+          "value": "bdxaoa95mlptsd"
         },
-        "hide": 0,
         "includeAll": false,
         "label": "Datasource",
-        "multi": false,
         "name": "DS_PROMETHEUS",
         "options": [],
         "query": "prometheus",
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
         "type": "datasource"
       }
     ]
@@ -608,9 +619,9 @@
     "to": "now"
   },
   "timepicker": {},
-  "timezone": "",
+  "timezone": "browser",
   "title": "Fuel Prices API",
   "uid": "fuel-prices-api",
-  "version": 1,
+  "version": 5,
   "weekStart": ""
 }
