@@ -1,6 +1,12 @@
 # fuel-prices-api
+
 Wraps GOV.UKs petrol prices API to allow historical querying and fast geo-lookup by bounding box
 
+## Grafana Dashboard
+
+Import the [grafana_dashboard.json](./grafana-dashboard.json) and set prometheus as the data source:
+
+![screenshot](./docs/grafana.webp)
 
 ## Useful queries
 
@@ -13,4 +19,4 @@ HAVING COUNT(*) > 1;
 
 ## References
 
-* https://www.developer.fuel-finder.service.gov.uk/public-api
+- https://www.developer.fuel-finder.service.gov.uk/public-api
