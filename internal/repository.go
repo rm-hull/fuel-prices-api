@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
+	"github.com/kofalt/go-memoize"
 	"github.com/rm-hull/fuel-prices-api/internal/models"
 	"github.com/tavsec/gin-healthcheck/checks"
 )
@@ -23,10 +25,14 @@ var searchPfsSQL string
 //go:embed sql/search_prices.sql
 var searchPricesSQL string
 
+//go:embed sql/snapshot_stats.sql
+var snapshotStatsSQL string
+
 type FuelPricesRepository interface {
 	InsertPFS(batch []models.PetrolFillingStation) (int, error)
 	InsertPrices(batch []models.ForecourtPrices) (int, error)
 	Search(boundingBox []float64, perTypeLimit int) ([]models.SearchResult, error)
+	SnapshotStats() ([]models.SnapshotStatistics, error)
 	Close() error
 	Check() checks.Check
 }
@@ -34,12 +40,14 @@ type FuelPricesRepository interface {
 type sqliteRepository struct {
 	db        *sql.DB
 	retailers *models.Retailers
+	cache     *memoize.Memoizer
 }
 
 func NewFuelPricesRepository(db *sql.DB, retailers *models.Retailers) FuelPricesRepository {
 	return &sqliteRepository{
 		db:        db,
 		retailers: retailers,
+		cache:     memoize.NewMemoizer(60*time.Minute, 10*time.Minute),
 	}
 }
 
@@ -258,4 +266,39 @@ func (repo *sqliteRepository) fetchPrices(boundingBox []float64, results *map[st
 			EffectiveFrom: fuelPrice.PriceChangeEffectiveTimestamp,
 		})
 	}
+}
+
+func (repo *sqliteRepository) SnapshotStats() ([]models.SnapshotStatistics, error) {
+	result, err, _ := memoize.Call(repo.cache, "snapshot_stats", repo.snapshotQuery)
+	return result, err
+}
+
+func (repo *sqliteRepository) snapshotQuery() ([]models.SnapshotStatistics, error) {
+	rows, err := repo.db.Query(snapshotStatsSQL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute snapshot stats: %w", err)
+	}
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			log.Printf("failed to close rows: %v", closeErr)
+		}
+	}()
+
+	results := make([]models.SnapshotStatistics, 0, 50)
+	var snapshot models.SnapshotStatistics
+
+	for rows.Next() {
+
+		if err := rows.Scan(
+			&snapshot.Scope, &snapshot.PostcodeArea, &snapshot.FuelType,
+			&snapshot.LowestPrice, &snapshot.AveragePrice, &snapshot.HighestPrice,
+			&snapshot.StandardDeviation, &snapshot.SampleSize,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+
+		results = append(results, snapshot)
+	}
+
+	return results, nil
 }

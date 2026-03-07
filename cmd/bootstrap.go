@@ -6,10 +6,12 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rm-hull/godx"
 
 	"github.com/rm-hull/fuel-prices-api/internal"
 	"github.com/rm-hull/fuel-prices-api/internal/brands"
+	"github.com/rm-hull/fuel-prices-api/internal/metrics"
 )
 
 // bootstrap initialises shared resources used by both the API server and import
@@ -48,6 +50,7 @@ func bootstrap(dbPath string, fullRefresh bool) (internal.FuelPricesClient, inte
 	}
 
 	repo := internal.NewFuelPricesRepository(db, &retailers)
+	metrics.RegisterFuelStatsCollector(prometheus.DefaultRegisterer, repo.SnapshotStats)
 
 	return client, repo, nil
 }

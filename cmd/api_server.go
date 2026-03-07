@@ -65,6 +65,7 @@ func ApiServer(dbPath string, port int, fullRefresh, debug bool) error {
 
 	v1 := r.Group("/v1/fuel-prices")
 	v1.GET("/search", routes.Search(repo, client))
+	v1.GET("/snapshot-stats", routes.SnapshotStats(repo))
 
 	addr := fmt.Sprintf(":%d", port)
 	log.Printf("Starting HTTP API Server on port %d...", port)
