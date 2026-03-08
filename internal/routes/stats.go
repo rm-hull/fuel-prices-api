@@ -6,11 +6,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rm-hull/fuel-prices-api/internal"
+	"github.com/rm-hull/fuel-prices-api/internal/models"
 )
 
 func SnapshotStats(repo internal.FuelPricesRepository) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		results, err := repo.SnapshotStats()
+		stats, err := repo.SnapshotStats()
 
 		if err != nil {
 			log.Printf("error while fetching stats: %v", err)
@@ -18,9 +19,9 @@ func SnapshotStats(repo internal.FuelPricesRepository) func(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"snapshot":    results,
-			"attribution": internal.ATTRIBUTION,
+		c.JSON(http.StatusOK, models.SnapshotResponse{
+			SnapshotStatistics: *stats,
+			Attribution:        internal.ATTRIBUTION,
 		})
 	}
 }

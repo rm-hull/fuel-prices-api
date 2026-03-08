@@ -32,7 +32,7 @@ type FuelPricesRepository interface {
 	InsertPFS(batch []models.PetrolFillingStation) (int, error)
 	InsertPrices(batch []models.ForecourtPrices) (int, error)
 	Search(boundingBox []float64, perTypeLimit int) ([]models.SearchResult, error)
-	SnapshotStats() ([]models.SnapshotStatistics, error)
+	SnapshotStats() (*models.SnapshotStatistics, error)
 	Close() error
 	Check() checks.Check
 }
@@ -268,12 +268,12 @@ func (repo *sqliteRepository) fetchPrices(boundingBox []float64, results *map[st
 	}
 }
 
-func (repo *sqliteRepository) SnapshotStats() ([]models.SnapshotStatistics, error) {
+func (repo *sqliteRepository) SnapshotStats() (*models.SnapshotStatistics, error) {
 	result, err, _ := memoize.Call(repo.cache, "snapshot_stats", repo.snapshotQuery)
 	return result, err
 }
 
-func (repo *sqliteRepository) snapshotQuery() ([]models.SnapshotStatistics, error) {
+func (repo *sqliteRepository) snapshotQuery() (*models.SnapshotStatistics, error) {
 	rows, err := repo.db.Query(snapshotStatsSQL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute snapshot stats: %w", err)
@@ -284,9 +284,9 @@ func (repo *sqliteRepository) snapshotQuery() ([]models.SnapshotStatistics, erro
 		}
 	}()
 
-	results := make([]models.SnapshotStatistics, 0, 50)
+	results := make([]models.Snapshot, 0, 50)
 	for rows.Next() {
-		var snapshot models.SnapshotStatistics
+		var snapshot models.Snapshot
 		if err := rows.Scan(
 			&snapshot.Scope, &snapshot.PostcodeArea, &snapshot.FuelType,
 			&snapshot.LowestPrice, &snapshot.AveragePrice, &snapshot.HighestPrice,
@@ -298,5 +298,8 @@ func (repo *sqliteRepository) snapshotQuery() ([]models.SnapshotStatistics, erro
 		results = append(results, snapshot)
 	}
 
-	return results, nil
+	return &models.SnapshotStatistics{
+		Snapshot:    results,
+		LastUpdated: new(time.Now()),
+	}, nil
 }

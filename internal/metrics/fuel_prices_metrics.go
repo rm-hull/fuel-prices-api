@@ -13,7 +13,7 @@ type fuelPricesGaugeCollector struct {
 	maxDesc    *prometheus.Desc
 	stddevDesc *prometheus.Desc
 	sampleDesc *prometheus.Desc
-	valFunc    func() ([]models.SnapshotStatistics, error)
+	valFunc    func() (*models.SnapshotStatistics, error)
 }
 
 func (c *fuelPricesGaugeCollector) Describe(ch chan<- *prometheus.Desc) {
@@ -32,7 +32,7 @@ func (c *fuelPricesGaugeCollector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 
-	for _, s := range stats {
+	for _, s := range stats.Snapshot {
 		postcodeArea := ""
 		if s.PostcodeArea != nil {
 			postcodeArea = *s.PostcodeArea
@@ -46,7 +46,7 @@ func (c *fuelPricesGaugeCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func RegisterFuelStatsCollector(reg prometheus.Registerer, fn func() ([]models.SnapshotStatistics, error)) {
+func RegisterFuelStatsCollector(reg prometheus.Registerer, fn func() (*models.SnapshotStatistics, error)) {
 
 	labels := []string{"postcode_area", "fuel_type"}
 	collector := fuelPricesGaugeCollector{
