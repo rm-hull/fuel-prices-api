@@ -285,10 +285,8 @@ func (repo *sqliteRepository) snapshotQuery() ([]models.SnapshotStatistics, erro
 	}()
 
 	results := make([]models.SnapshotStatistics, 0, 50)
-	var snapshot models.SnapshotStatistics
-
 	for rows.Next() {
-
+		var snapshot models.SnapshotStatistics
 		if err := rows.Scan(
 			&snapshot.Scope, &snapshot.PostcodeArea, &snapshot.FuelType,
 			&snapshot.LowestPrice, &snapshot.AveragePrice, &snapshot.HighestPrice,
