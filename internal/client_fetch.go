@@ -16,6 +16,7 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rm-hull/fuel-prices-api/internal/metrics"
 	"github.com/rm-hull/fuel-prices-api/internal/models"
 )
 
@@ -70,7 +71,7 @@ type fuelPricesManager struct {
 	tokenData   models.TokenData
 	timeTracker timeTracker
 	client      *http.Client
-	metrics     *ClientFetchMetrics
+	metrics     *metrics.ClientFetchMetrics
 	fullRefresh bool
 }
 
@@ -86,7 +87,7 @@ func NewFuelPricesClient(clientId, clientSecret string, fullRefresh bool) (FuelP
 			ClientId:     clientId,
 			ClientSecret: clientSecret,
 		},
-		metrics: NewClientFetchMetrics(prometheus.DefaultRegisterer),
+		metrics: metrics.NewClientFetchMetrics(prometheus.DefaultRegisterer),
 	}
 
 	err := mgr.authenticate()
