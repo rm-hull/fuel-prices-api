@@ -23,6 +23,158 @@
     {
       "datasource": {
         "type": "prometheus",
+        "uid": "bdxaoa95mlptsd"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "purple",
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Diesel (B7)",
+            "axisPlacement": "left",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "{__name__=\"fuel_prices_govuk_api_price_avg\", fuel_type=\"B7_STANDARD\", instance=\"fuel-prices:8080\", job=\"fuel-prices\"}"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "purple",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "Diesel (B7)"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "{__name__=\"fuel_prices_govuk_api_price_avg\", fuel_type=\"E10\", instance=\"fuel-prices:8080\", job=\"fuel-prices\"}"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Petrol (E10)"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "Petrol (E10)"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "fuel_prices_govuk_api_price_avg{fuel_type=\"B7_STANDARD\", postcode_area=\"\"}",
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "B7_STANDARD"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "bdxaoa95mlptsd"
+          },
+          "editorMode": "code",
+          "expr": "fuel_prices_govuk_api_price_avg{fuel_type=\"E10\", postcode_area=\"\"}",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "E10"
+        }
+      ],
+      "timeFrom": "7d",
+      "title": "Average National Fuel Prices",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
@@ -114,7 +266,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 0
+        "y": 9
       },
       "id": 1,
       "options": {
@@ -169,7 +321,7 @@
           "refId": "P99"
         }
       ],
-      "title": "Upstream API Latency - fuel-prices (P50, P90, P99)",
+      "title": "Upstream API Latency - fuel-prices",
       "type": "timeseries"
     },
     {
@@ -268,7 +420,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 0
+        "y": 9
       },
       "id": 2,
       "options": {
@@ -286,8 +438,8 @@
         "showValue": "never",
         "stacking": "normal",
         "tooltip": {
-          "hideZeros": false,
-          "mode": "all",
+          "hideZeros": true,
+          "mode": "multi",
           "sort": "none"
         },
         "xField": "path",
@@ -358,7 +510,7 @@
             },
             "showPoints": "auto",
             "showValues": false,
-            "spanNulls": false,
+            "spanNulls": true,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -385,7 +537,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 8
+        "y": 17
       },
       "id": 3,
       "options": {
@@ -458,7 +610,7 @@
             },
             "showPoints": "auto",
             "showValues": true,
-            "spanNulls": false,
+            "spanNulls": true,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -489,7 +641,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 8
+        "y": 17
       },
       "id": 5,
       "options": {
@@ -589,7 +741,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 25
       },
       "id": 4,
       "options": {
@@ -613,7 +765,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (code, path) (rate(gin_http_requests_total[$__rate_interval]))",
+          "expr": "sum by (code, path) (increase(gin_gonic_requests_total{path=~\"/v1/fuel-prices/.*\"}[$__rate_interval]))",
           "format": "time_series",
           "legendFormat": "{{path}} - Status: {{code}}",
           "range": true,
@@ -625,7 +777,7 @@
     }
   ],
   "preload": false,
-  "refresh": "",
+  "refresh": "5m",
   "schemaVersion": 42,
   "tags": [
     "fuel-prices-api"
@@ -656,6 +808,6 @@
   "timezone": "browser",
   "title": "Fuel Prices API",
   "uid": "fuel-prices-api",
-  "version": 12,
+  "version": 21,
   "weekStart": ""
 }
