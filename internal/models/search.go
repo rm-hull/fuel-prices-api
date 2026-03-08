@@ -31,7 +31,7 @@ type SearchStatistics struct {
 	BrandDistribution map[string]int            `json:"brand_distribution,omitempty"`
 }
 
-type SnapshotStatistics struct {
+type Snapshot struct {
 	Scope             string  `json:"scope"`
 	PostcodeArea      *string `json:"postcode_area,omitempty"`
 	FuelType          string  `json:"fuel_type"`
@@ -40,4 +40,9 @@ type SnapshotStatistics struct {
 	HighestPrice      float64 `json:"highest_price"`
 	StandardDeviation float64 `json:"standard_deviation"`
 	SampleSize        int     `json:"sample_size"`
+}
+
+type SnapshotStatistics struct {
+	Snapshot    []Snapshot `json:"snapshot,omitempty"`
+	LastUpdated *time.Time `json:"last_updated,omitempty"`
 }

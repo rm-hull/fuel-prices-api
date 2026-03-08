@@ -10,7 +10,7 @@ import (
 
 func SnapshotStats(repo internal.FuelPricesRepository) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		results, err := repo.SnapshotStats()
+		stats, err := repo.SnapshotStats()
 
 		if err != nil {
 			log.Printf("error while fetching stats: %v", err)
@@ -19,8 +19,9 @@ func SnapshotStats(repo internal.FuelPricesRepository) func(c *gin.Context) {
 		}
 
 		c.JSON(http.StatusOK, gin.H{
-			"snapshot":    results,
-			"attribution": internal.ATTRIBUTION,
+			"snapshot":     stats.Snapshot,
+			"last_updated": stats.LastUpdated,
+			"attribution":  internal.ATTRIBUTION,
 		})
 	}
 }
