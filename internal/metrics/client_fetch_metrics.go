@@ -2,73 +2,73 @@ package metrics
 
 import (
 	"log"
+	"math"
+	"net/http"
+	"net/url"
+	"strconv"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/rm-hull/fuel-prices-api/internal/models"
 )
 
-type fuelPricesGaugeCollector struct {
-	avgDesc    *prometheus.Desc
-	minDesc    *prometheus.Desc
-	maxDesc    *prometheus.Desc
-	stddevDesc *prometheus.Desc
-	sampleDesc *prometheus.Desc
-	valFunc    func() ([]models.SnapshotStatistics, error)
+type ClientFetchMetrics struct {
+	ResponseLatency    *prometheus.HistogramVec
+	ResponseStatusCode *prometheus.CounterVec
+	ItemsFetchedTotal  *prometheus.CounterVec
 }
 
-func (c *fuelPricesGaugeCollector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- c.avgDesc
-	ch <- c.minDesc
-	ch <- c.maxDesc
-	ch <- c.stddevDesc
-	ch <- c.sampleDesc
-}
-
-func (c *fuelPricesGaugeCollector) Collect(ch chan<- prometheus.Metric) {
-
-	stats, err := c.valFunc()
-	if err != nil {
-		log.Printf("failed to collect fuel price stats: %v", err)
-		return
-	}
-
-	m := map[*prometheus.Desc]func(s models.SnapshotStatistics) float64{
-		c.avgDesc:    func(s models.SnapshotStatistics) float64 { return s.AveragePrice },
-		c.minDesc:    func(s models.SnapshotStatistics) float64 { return s.LowestPrice },
-		c.maxDesc:    func(s models.SnapshotStatistics) float64 { return s.HighestPrice },
-		c.stddevDesc: func(s models.SnapshotStatistics) float64 { return s.StandardDeviation },
-		c.sampleDesc: func(s models.SnapshotStatistics) float64 { return float64(s.SampleSize) },
-	}
-
-	for _, s := range stats {
-		postcodeArea := ""
-		if s.PostcodeArea != nil {
-			postcodeArea = *s.PostcodeArea
-		}
-		for desc, fn := range m {
-			ch <- prometheus.MustNewConstMetric(
-				desc,
-				prometheus.GaugeValue,
-				fn(s),
-				postcodeArea, s.FuelType,
-			)
-		}
-	}
-}
-
-func RegisterFuelStatsCollector(reg prometheus.Registerer, fn func() ([]models.SnapshotStatistics, error)) {
-
-	labels := []string{"postcode_area", "fuel_type"}
-	collector := fuelPricesGaugeCollector{
-		avgDesc:    prometheus.NewDesc("fuel_prices_govuk_api_price_avg", "Average price at national and postcode area by fuel_type", labels, nil),
-		minDesc:    prometheus.NewDesc("fuel_prices_govuk_api_price_min", "Minimum price at national and postcode area by fuel_type", labels, nil),
-		maxDesc:    prometheus.NewDesc("fuel_prices_govuk_api_price_max", "Maximum price at national and postcode area by fuel_type", labels, nil),
-		stddevDesc: prometheus.NewDesc("fuel_prices_govuk_api_price_standard_deviation", "StdDev price at national and postcode area by fuel_type", labels, nil),
-		sampleDesc: prometheus.NewDesc("fuel_prices_govuk_api_price_sample", "Price sample size at national and postcode area by fuel_type", labels, nil),
-		valFunc:    fn,
+func NewClientFetchMetrics(reg prometheus.Registerer) *ClientFetchMetrics {
+	m := &ClientFetchMetrics{
+		ResponseLatency: prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:    "fuel_prices_govuk_api_http_response_latency_seconds",
+				Help:    "GOV.UK fuel finder client API HTTP response latency in seconds.",
+				Buckets: []float64{0.1, 0.25, 0.5, 1, 2, 5, 10, 30, math.Inf(1)},
+			},
+			[]string{"path", "method"},
+		),
+		ResponseStatusCode: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "fuel_prices_govuk_api_http_response_status_codes_total",
+				Help: "GOV.UK fuel finder client API total number of HTTP responses by status code.",
+			},
+			[]string{"path", "method", "status_code"},
+		),
+		ItemsFetchedTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "fuel_prices_govuk_api_items_fetched_total",
+				Help: "GOV.UK fuel finder client API total number of items fetched from the upstream API.",
+			},
+			[]string{"path"},
+		),
 	}
 
 	if reg != nil {
-		reg.MustRegister(&collector)
+		reg.MustRegister(m.ResponseLatency)
+		reg.MustRegister(m.ResponseStatusCode)
+		reg.MustRegister(m.ItemsFetchedTotal)
+	}
+
+	return m
+}
+
+func (m *ClientFetchMetrics) RecordHttpCall(start time.Time, method, endpoint string, resp *http.Response, err error) {
+	if m != nil {
+		u, parseErr := url.Parse(endpoint)
+		path := u.Path
+		if parseErr != nil {
+			log.Printf("failed to parse endpoint URL '%s' for metrics: %v", endpoint, parseErr)
+			path = "invalid_url"
+		}
+		m.ResponseLatency.WithLabelValues(path, method).Observe(time.Since(start).Seconds())
+		if err == nil {
+			m.ResponseStatusCode.WithLabelValues(path, method, strconv.Itoa(resp.StatusCode)).Inc()
+		}
+	}
+}
+
+func (m *ClientFetchMetrics) RecordFetchedItems(path string, count int) {
+	if m != nil && count > 0 {
+		m.ItemsFetchedTotal.WithLabelValues(path).Add(float64(count))
 	}
 }
