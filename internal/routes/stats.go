@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rm-hull/fuel-prices-api/internal"
+	"github.com/rm-hull/fuel-prices-api/internal/models"
 )
 
 func SnapshotStats(repo internal.FuelPricesRepository) func(c *gin.Context) {
@@ -18,10 +19,9 @@ func SnapshotStats(repo internal.FuelPricesRepository) func(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"snapshot":     stats.Snapshot,
-			"last_updated": stats.LastUpdated,
-			"attribution":  internal.ATTRIBUTION,
+		c.JSON(http.StatusOK, models.SnapshotResponse{
+			SnapshotStatistics: *stats,
+			Attribution:        internal.ATTRIBUTION,
 		})
 	}
 }
