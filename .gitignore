@@ -32,3 +32,4 @@ go.work.sum
 .vscode/settings.json
 data/
 __debug_bin*
+fuel-prices-api

@@ -54,7 +54,7 @@ func TestFetchPricesIntegration(t *testing.T) {
 		FuelTypes: []string{"E10"},
 	}
 
-	_, err := repo.InsertPFS([]models.PetrolFillingStation{pfs1, pfs2})
+	_, _, err := repo.InsertPFS([]models.PetrolFillingStation{pfs1, pfs2})
 	require.NoError(t, err)
 
 	prices := []models.ForecourtPrices{
@@ -77,7 +77,7 @@ func TestFetchPricesIntegration(t *testing.T) {
 		},
 	}
 
-	_, err = repo.InsertPrices(prices)
+	_, _, err = repo.InsertPrices(prices)
 	require.NoError(t, err)
 
 	t.Run("Bounding box filtering", func(t *testing.T) {

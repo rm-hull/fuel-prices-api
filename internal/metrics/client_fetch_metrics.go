@@ -15,6 +15,7 @@ type ClientFetchMetrics struct {
 	ResponseLatency    *prometheus.HistogramVec
 	ResponseStatusCode *prometheus.CounterVec
 	ItemsFetchedTotal  *prometheus.CounterVec
+	ItemsDroppedTotal  *prometheus.CounterVec
 }
 
 func NewClientFetchMetrics(reg prometheus.Registerer) *ClientFetchMetrics {
@@ -41,12 +42,20 @@ func NewClientFetchMetrics(reg prometheus.Registerer) *ClientFetchMetrics {
 			},
 			[]string{"path"},
 		),
+		ItemsDroppedTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "fuel_prices_govuk_api_items_dropped_total",
+				Help: "GOV.UK fuel finder client API total number of items dropped from the upstream API.",
+			},
+			[]string{"path"},
+		),
 	}
 
 	if reg != nil {
 		reg.MustRegister(m.ResponseLatency)
 		reg.MustRegister(m.ResponseStatusCode)
 		reg.MustRegister(m.ItemsFetchedTotal)
+		reg.MustRegister(m.ItemsDroppedTotal)
 	}
 
 	return m
@@ -67,8 +76,16 @@ func (m *ClientFetchMetrics) RecordHttpCall(start time.Time, method, endpoint st
 	}
 }
 
-func (m *ClientFetchMetrics) RecordFetchedItems(path string, count int) {
-	if m != nil && count > 0 {
+func (m *ClientFetchMetrics) RecordFetchedItems(path string, count int, dropped int) {
+	if m == nil {
+		return
+	}
+
+	if count > 0 {
 		m.ItemsFetchedTotal.WithLabelValues(path).Add(float64(count))
+	}
+
+	if dropped > 0 {
+		m.ItemsDroppedTotal.WithLabelValues(path).Add(float64(dropped))
 	}
 }

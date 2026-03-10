@@ -29,8 +29,8 @@ var searchPricesSQL string
 var snapshotStatsSQL string
 
 type FuelPricesRepository interface {
-	InsertPFS(batch []models.PetrolFillingStation) (int, error)
-	InsertPrices(batch []models.ForecourtPrices) (int, error)
+	InsertPFS(batch []models.PetrolFillingStation) (int, int, error)
+	InsertPrices(batch []models.ForecourtPrices) (int, int, error)
 	Search(boundingBox []float64, perTypeLimit int) ([]models.SearchResult, error)
 	SnapshotStats() (*models.SnapshotStatistics, error)
 	Close() error
@@ -59,14 +59,14 @@ func (repo *sqliteRepository) Check() checks.Check {
 	return checks.SqlCheck{Sql: repo.db}
 }
 
-func (repo *sqliteRepository) InsertPFS(batch []models.PetrolFillingStation) (int, error) {
+func (repo *sqliteRepository) InsertPFS(batch []models.PetrolFillingStation) (int, int, error) {
 	if len(batch) == 0 {
-		return 0, nil
+		return 0, 0, nil
 	}
 
 	tx, err := repo.db.Begin()
 	if err != nil {
-		return 0, fmt.Errorf("failed to begin transaction: %w", err)
+		return 0, 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer func() {
 		if err != nil {
@@ -78,7 +78,7 @@ func (repo *sqliteRepository) InsertPFS(batch []models.PetrolFillingStation) (in
 
 	stmt, err := tx.Prepare(insertPfsSQL)
 	if err != nil {
-		return 0, fmt.Errorf("failed to prepare statement: %w", err)
+		return 0, 0, fmt.Errorf("failed to prepare statement: %w", err)
 	}
 	defer func() {
 		if err := stmt.Close(); err != nil {
@@ -90,26 +90,26 @@ func (repo *sqliteRepository) InsertPFS(batch []models.PetrolFillingStation) (in
 	for _, pfs := range batch {
 		_, err = stmt.Exec(pfs.ToTuple()...)
 		if err != nil {
-			return 0, fmt.Errorf("failed to execute individual insert: %w", err)
+			return 0, 0, fmt.Errorf("failed to execute individual insert: %w", err)
 		}
 		count++
 	}
 
 	if err = tx.Commit(); err != nil {
-		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+		return 0, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return count, nil
+	return count, 0, nil
 }
 
-func (repo *sqliteRepository) InsertPrices(batch []models.ForecourtPrices) (int, error) {
+func (repo *sqliteRepository) InsertPrices(batch []models.ForecourtPrices) (int, int, error) {
 	if len(batch) == 0 {
-		return 0, nil
+		return 0, 0, nil
 	}
 
 	tx, err := repo.db.Begin()
 	if err != nil {
-		return 0, fmt.Errorf("failed to begin transaction: %w", err)
+		return 0, 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer func() {
 		if err != nil {
@@ -121,7 +121,7 @@ func (repo *sqliteRepository) InsertPrices(batch []models.ForecourtPrices) (int,
 
 	stmt, err := tx.Prepare(insertPricesSQL)
 	if err != nil {
-		return 0, fmt.Errorf("failed to prepare statement: %w", err)
+		return 0, 0, fmt.Errorf("failed to prepare statement: %w", err)
 	}
 	defer func() {
 		if err := stmt.Close(); err != nil {
@@ -130,21 +130,27 @@ func (repo *sqliteRepository) InsertPrices(batch []models.ForecourtPrices) (int,
 	}()
 
 	count := 0
+	dropped := 0
 	for _, forecourtPrices := range batch {
 		for _, fuelPrice := range forecourtPrices.FuelPrices {
+			if fuelPrice.IsPriceOutOfBounds() {
+				log.Printf("WARNING: %s price of %0.2fp looks like an input-entry error; dropping fuel_price record for node_id: %s", fuelPrice.FuelType, fuelPrice.Price, forecourtPrices.NodeId)
+				dropped++
+				continue
+			}
 			_, err = stmt.Exec(fuelPrice.ToTuple(forecourtPrices.NodeId)...)
 			if err != nil {
-				return 0, fmt.Errorf("failed to execute individual insert: %w", err)
+				return 0, 0, fmt.Errorf("failed to execute individual insert: %w", err)
 			}
 			count++
 		}
 	}
 
 	if err = tx.Commit(); err != nil {
-		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+		return 0, 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return count, nil
+	return count, dropped, nil
 }
 
 func (repo *sqliteRepository) Search(boundingBox []float64, perTypeLimit int) ([]models.SearchResult, error) {

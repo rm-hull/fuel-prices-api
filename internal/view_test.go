@@ -29,7 +29,7 @@ func TestFuelPriceSnapshotStatsView(t *testing.T) {
 		{NodeId: "M1", Location: models.Location{Postcode: "M1 1AA"}},
 		{NodeId: "O1", Location: models.Location{Postcode: "OX1 1AA"}}, // Oxford
 	}
-	_, err := repo.InsertPFS(stations)
+	_, _, err := repo.InsertPFS(stations)
 	require.NoError(t, err)
 
 	yesterday := now.Add(-24 * time.Hour)
@@ -64,7 +64,7 @@ func TestFuelPriceSnapshotStatsView(t *testing.T) {
 			},
 		},
 	}
-	_, err = repo.InsertPrices(prices)
+	_, _, err = repo.InsertPrices(prices)
 	require.NoError(t, err)
 
 	// Expected stats (including Oxford):

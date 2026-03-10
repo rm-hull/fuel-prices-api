@@ -16,9 +16,9 @@ func StartCron(client FuelPricesClient, repo FuelPricesRepository) (*cron.Cron, 
 	log.Print("Starting CRON jobs to update petrol filling stations and fuel prices")
 
 	if _, err := c.AddFunc(CRON_SCHEDULE_PFS, func() {
-		numPFS, err := client.GetFillingStations(repo.InsertPFS)
+		numPFS, dropped, err := client.GetFillingStations(repo.InsertPFS)
 		if err != nil {
-			log.Printf("Error fetching PFS: %v\n", err)
+			log.Printf("Error fetching PFS: %v (dropped: %d) \n", err, dropped)
 			return
 		}
 		log.Printf("Inserted %d PFS", numPFS)
@@ -27,12 +27,12 @@ func StartCron(client FuelPricesClient, repo FuelPricesRepository) (*cron.Cron, 
 	}
 
 	if _, err := c.AddFunc(CRON_SCHEDULE_PRICES, func() {
-		numPrices, err := client.GetFuelPrices(repo.InsertPrices)
+		numPrices, dropped, err := client.GetFuelPrices(repo.InsertPrices)
 		if err != nil {
 			log.Printf("Error fetching fuel prices: %v\n", err)
 			return
 		}
-		log.Printf("Inserted %d fuel prices", numPrices)
+		log.Printf("Inserted %d fuel prices (dropped: %d) ", numPrices, dropped)
 	}); err != nil {
 		return nil, err
 	}
