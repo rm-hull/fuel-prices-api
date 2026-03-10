@@ -1,4 +1,4 @@
--- Revert the optimized stats views to their previous states.
+-- Revert the optimized stats views and clean up the base view.
 
 -- 1. Restore snapshot stats (as of migration 000004)
 DROP VIEW IF EXISTS fuel_price_snapshot_stats;
@@ -106,3 +106,6 @@ postcode_area_distribution AS (
 SELECT * FROM national_distribution
 UNION ALL
 SELECT * FROM postcode_area_distribution;
+
+-- 3. Clean up the base view
+DROP VIEW IF EXISTS fuel_price_latest_with_area;
