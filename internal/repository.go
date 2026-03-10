@@ -36,6 +36,7 @@ type FuelPricesRepository interface {
 	InsertPrices(batch []models.ForecourtPrices) (int, int, error)
 	Search(boundingBox []float64, perTypeLimit int) ([]models.SearchResult, error)
 	SnapshotStats() (*models.SnapshotStatistics, error)
+	DistributionStats() (*models.DistributionStatistics, error)
 	Close() error
 	Check() checks.Check
 }
@@ -282,6 +283,11 @@ func (repo *sqliteRepository) SnapshotStats() (*models.SnapshotStatistics, error
 	return result, err
 }
 
+func (repo *sqliteRepository) DistributionStats() (*models.DistributionStatistics, error) {
+	result, err, _ := memoize.Call(repo.cache, "distribution_stats", repo.distributionQuery)
+	return result, err
+}
+
 func (repo *sqliteRepository) snapshotQuery() (*models.SnapshotStatistics, error) {
 	now := time.Now()
 
@@ -308,6 +314,15 @@ func (repo *sqliteRepository) snapshotQuery() (*models.SnapshotStatistics, error
 
 		snapshotResults = append(snapshotResults, snapshot)
 	}
+
+	return &models.SnapshotStatistics{
+		Snapshot:    snapshotResults,
+		LastUpdated: &now,
+	}, nil
+}
+
+func (repo *sqliteRepository) distributionQuery() (*models.DistributionStatistics, error) {
+	now := time.Now()
 
 	distributionRows, err := repo.db.Query(distributionStatsSQL)
 	if err != nil {
@@ -359,8 +374,7 @@ func (repo *sqliteRepository) snapshotQuery() (*models.SnapshotStatistics, error
 		distributionResults = append(distributionResults, *d)
 	}
 
-	return &models.SnapshotStatistics{
-		Snapshot:     snapshotResults,
+	return &models.DistributionStatistics{
 		Distribution: distributionResults,
 		LastUpdated:  &now,
 	}, nil

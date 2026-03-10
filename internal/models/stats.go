@@ -21,12 +21,22 @@ type Distribution struct {
 }
 
 type SnapshotStatistics struct {
-	Snapshot     []Snapshot     `json:"snapshot,omitempty"`
-	Distribution []Distribution `json:"distribution,omitempty"`
-	LastUpdated  *time.Time     `json:"last_updated,omitempty"`
+	Snapshot    []Snapshot `json:"snapshot,omitempty"`
+	LastUpdated *time.Time `json:"last_updated,omitempty"`
 }
 
 type SnapshotResponse struct {
 	SnapshotStatistics
 	Attribution []string `json:"attribution"`
 }
+
+type DistributionStatistics struct {
+	Distribution []Distribution `json:"distribution,omitempty"`
+	LastUpdated  *time.Time     `json:"last_updated,omitempty"`
+}
+
+type DistributionResponse struct {
+	DistributionStatistics
+	Attribution []string `json:"attribution"`
+}
+

@@ -34,5 +34,11 @@ GET http://localhost:8080/healthz
 ### Metrics
 GET http://localhost:8080/metrics
 
-### Snapshot Stats
+### Snapshot Stats (legacy)
 GET http://localhost:8080/v1/fuel-prices/snapshot-stats
+
+### Snapshot Stats
+GET http://localhost:8080/v1/fuel-prices/stats/snapshot
+
+### Distribution Stats
+GET http://localhost:8080/v1/fuel-prices/stats/distribution

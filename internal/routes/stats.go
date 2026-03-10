@@ -14,7 +14,7 @@ func SnapshotStats(repo internal.FuelPricesRepository) func(c *gin.Context) {
 		stats, err := repo.SnapshotStats()
 
 		if err != nil {
-			log.Printf("error while fetching stats: %v", err)
+			log.Printf("error while fetching snapshot stats: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "An internal server error occurred"})
 			return
 		}
@@ -22,6 +22,23 @@ func SnapshotStats(repo internal.FuelPricesRepository) func(c *gin.Context) {
 		c.JSON(http.StatusOK, models.SnapshotResponse{
 			SnapshotStatistics: *stats,
 			Attribution:        internal.ATTRIBUTION,
+		})
+	}
+}
+
+func DistributionStats(repo internal.FuelPricesRepository) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		stats, err := repo.DistributionStats()
+
+		if err != nil {
+			log.Printf("error while fetching distribution stats: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "An internal server error occurred"})
+			return
+		}
+
+		c.JSON(http.StatusOK, models.DistributionResponse{
+			DistributionStatistics: *stats,
+			Attribution:            internal.ATTRIBUTION,
 		})
 	}
 }
