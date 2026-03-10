@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -105,13 +106,23 @@ func (pfs *PetrolFillingStation) ToTuple() []any {
 
 func (fp *FuelPrice) ToTuple(nodeId string) []any {
 
+	price, logMsg := cleansePrice(fp.Price)
+	if logMsg != "" {
+		log.Println(logMsg)
+	}
+
 	return []any{
 		nodeId,
 		fp.FuelType,
 		fp.PriceLastUpdated,
-		cleansePrice(fp.Price),
+		price,
 		fp.PriceChangeEffectiveTimestamp,
 	}
+}
+
+func (fp *FuelPrice) IsPriceOutOfBounds() bool {
+	price, _ := cleansePrice(fp.Price)
+	return price < 100 || price > 300
 }
 
 func toJSON(v any) string {
@@ -139,13 +150,13 @@ func cleanseAddressLine1(addressLine1, city, postcode string) string {
 	return addressLine1
 }
 
-func cleansePrice(price float64) float64 {
+func cleansePrice(price float64) (float64, string) {
 	// The API sometimes returns prices in pounds (rather than pence) or in tenths of pence
 	// (rather than pence), so we just adjust accordingly before writing to the database.
 	if price < 10 {
-		return price * 100
+		return price * 100, fmt.Sprintf("WARNING: correcting price %0.3f -> %0.1f", price, price*100)
 	} else if price > 1000 {
-		return price / 10
+		return price / 10, fmt.Sprintf("WARNING: correcting price %0.1f -> %0.1f", price, price/10)
 	}
-	return price
+	return price, ""
 }

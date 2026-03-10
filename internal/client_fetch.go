@@ -50,11 +50,11 @@ func (e *HTTPStatusError) Error() string {
 	return fmt.Sprintf("unexpected http response (%s) from %s, body: %s", e.Status, e.URL, body)
 }
 
-type BatchCallback[T any] func([]T) (int, error)
+type BatchCallback[T any] func([]T) (int, int, error)
 
 type FuelPricesClient interface {
-	GetFuelPrices(BatchCallback[models.ForecourtPrices]) (int, error)
-	GetFillingStations(BatchCallback[models.PetrolFillingStation]) (int, error)
+	GetFuelPrices(BatchCallback[models.ForecourtPrices]) (int, int, error)
+	GetFillingStations(BatchCallback[models.PetrolFillingStation]) (int, int, error)
 	LastUpdated() *time.Time
 }
 
@@ -105,7 +105,7 @@ func (mgr *fuelPricesManager) LastUpdated() *time.Time {
 	return &mgr.timeTracker.lastPricesFetch
 }
 
-func (mgr *fuelPricesManager) GetFuelPrices(callback BatchCallback[models.ForecourtPrices]) (int, error) {
+func (mgr *fuelPricesManager) GetFuelPrices(callback BatchCallback[models.ForecourtPrices]) (int, int, error) {
 	decode := func(body io.ReadCloser, batchNo int) ([]models.ForecourtPrices, error) {
 		var resp []models.ForecourtPrices
 		decoder := json.NewDecoder(body)
@@ -118,7 +118,7 @@ func (mgr *fuelPricesManager) GetFuelPrices(callback BatchCallback[models.Foreco
 	return fetchBatched(mgr, "pfs/fuel-prices", &mgr.timeTracker.lastPricesFetch, decode, callback)
 }
 
-func (mgr *fuelPricesManager) GetFillingStations(callback BatchCallback[models.PetrolFillingStation]) (int, error) {
+func (mgr *fuelPricesManager) GetFillingStations(callback BatchCallback[models.PetrolFillingStation]) (int, int, error) {
 	decode := func(body io.ReadCloser, batchNo int) ([]models.PetrolFillingStation, error) {
 		var resp []models.PetrolFillingStation
 		decoder := json.NewDecoder(body)
@@ -222,13 +222,14 @@ func fetchBatched[T any](
 	lastFetch *time.Time,
 	decode func(io.ReadCloser, int) ([]T, error),
 	callback BatchCallback[T],
-) (int, error) {
+) (int, int, error) {
 	if err := mgr.checkTokenExpiry(); err != nil {
-		return 0, fmt.Errorf("failed to refresh token: %w", err)
+		return 0, 0, fmt.Errorf("failed to refresh token: %w", err)
 	}
 
 	batchNo := 1
 	count := 0
+	totalDropped := 0
 
 	startTime := time.Now()
 	effectiveStartTimestamp := mgr.getEffectiveStartTimestamp(path, lastFetch)
@@ -247,22 +248,23 @@ func fetchBatched[T any](
 				log.Printf("No more batches available for %s, stopping at batch %d", path, batchNo-1)
 				break
 			}
-			return 0, err
+			return 0, 0, err
 		}
 
 		data, err := decode(body, batchNo)
 		if err != nil {
 			_ = body.Close()
-			return 0, err
+			return 0, 0, err
 		}
 		_ = body.Close()
 
-		numRecords, err := callback(data)
+		numRecords, dropped, err := callback(data)
 		if err != nil {
-			return 0, fmt.Errorf("callback error: %w", err)
+			return 0, 0, fmt.Errorf("callback error: %w", err)
 		}
-		mgr.metrics.RecordFetchedItems(path, numRecords)
+		mgr.metrics.RecordFetchedItems(path, numRecords, dropped)
 		count += numRecords
+		totalDropped += dropped
 		batchNo++
 
 		if numRecords == 0 {
@@ -271,7 +273,7 @@ func fetchBatched[T any](
 	}
 
 	*lastFetch = startTime
-	return count, nil
+	return count, totalDropped, nil
 }
 
 func (mgr *fuelPricesManager) get(url string) (io.ReadCloser, error) {

@@ -17,17 +17,17 @@ func Import(dbPath string) error {
 		}
 	}()
 
-	numPFS, err := client.GetFillingStations(repo.InsertPFS)
+	numPFS, dropped, err := client.GetFillingStations(repo.InsertPFS)
 	if err != nil {
 		return fmt.Errorf("failed to fetch filling stations: %w", err)
 	}
-	log.Printf("imported %d filling stations", numPFS)
+	log.Printf("imported %d filling stations (dropped: %d)", numPFS, dropped)
 
-	numPrices, err := client.GetFuelPrices(repo.InsertPrices)
+	numPrices, dropped, err := client.GetFuelPrices(repo.InsertPrices)
 	if err != nil {
 		return fmt.Errorf("failed to fetch fuel prices: %w", err)
 	}
-	log.Printf("imported %d fuel prices", numPrices)
+	log.Printf("imported %d fuel prices (dropped: %d)", numPrices, dropped)
 
 	return nil
 }
