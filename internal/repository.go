@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"log"
+	"sort"
 	"sync"
 	"time"
 
@@ -28,11 +29,15 @@ var searchPricesSQL string
 //go:embed sql/snapshot_stats.sql
 var snapshotStatsSQL string
 
+//go:embed sql/distribution_stats.sql
+var distributionStatsSQL string
+
 type FuelPricesRepository interface {
 	InsertPFS(batch []models.PetrolFillingStation) (int, int, error)
 	InsertPrices(batch []models.ForecourtPrices) (int, int, error)
 	Search(boundingBox []float64, perTypeLimit int) ([]models.SearchResult, error)
 	SnapshotStats() (*models.SnapshotStatistics, error)
+	DistributionStats() (*models.DistributionStatistics, error)
 	Close() error
 	Check() checks.Check
 }
@@ -279,33 +284,113 @@ func (repo *sqliteRepository) SnapshotStats() (*models.SnapshotStatistics, error
 	return result, err
 }
 
+func (repo *sqliteRepository) DistributionStats() (*models.DistributionStatistics, error) {
+	result, err, _ := memoize.Call(repo.cache, "distribution_stats", repo.distributionQuery)
+	return result, err
+}
+
 func (repo *sqliteRepository) snapshotQuery() (*models.SnapshotStatistics, error) {
-	rows, err := repo.db.Query(snapshotStatsSQL)
+	now := time.Now()
+
+	snapshotRows, err := repo.db.Query(snapshotStatsSQL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute snapshot stats: %w", err)
 	}
 	defer func() {
-		if closeErr := rows.Close(); closeErr != nil {
-			log.Printf("failed to close rows: %v", closeErr)
+		if closeErr := snapshotRows.Close(); closeErr != nil {
+			log.Printf("failed to close snapshot rows: %v", closeErr)
 		}
 	}()
 
-	results := make([]models.Snapshot, 0, 50)
-	for rows.Next() {
+	snapshotResults := make([]models.Snapshot, 0, 50)
+	for snapshotRows.Next() {
 		var snapshot models.Snapshot
-		if err := rows.Scan(
+		if err := snapshotRows.Scan(
 			&snapshot.Scope, &snapshot.PostcodeArea, &snapshot.FuelType,
 			&snapshot.LowestPrice, &snapshot.AveragePrice, &snapshot.HighestPrice,
 			&snapshot.StandardDeviation, &snapshot.SampleSize,
 		); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
+			return nil, fmt.Errorf("failed to scan snapshot row: %w", err)
 		}
 
-		results = append(results, snapshot)
+		snapshotResults = append(snapshotResults, snapshot)
 	}
 
 	return &models.SnapshotStatistics{
-		Snapshot:    results,
-		LastUpdated: new(time.Now()),
+		Snapshot:    snapshotResults,
+		LastUpdated: &now,
+	}, nil
+}
+
+func (repo *sqliteRepository) distributionQuery() (*models.DistributionStatistics, error) {
+	now := time.Now()
+
+	distributionRows, err := repo.db.Query(distributionStatsSQL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute distribution stats: %w", err)
+	}
+	defer func() {
+		if closeErr := distributionRows.Close(); closeErr != nil {
+			log.Printf("failed to close distribution rows: %v", closeErr)
+		}
+	}()
+
+	type distKey struct {
+		scope        string
+		postcodeArea string
+		fuelType     string
+	}
+
+	distMap := make(map[distKey]*models.Distribution)
+	for distributionRows.Next() {
+		var scope, fuelType string
+		var postcodeArea sql.NullString
+		var priceBucket, sampleSize int
+
+		if err := distributionRows.Scan(
+			&scope, &postcodeArea, &fuelType, &priceBucket, &sampleSize,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan distribution row: %w", err)
+		}
+
+		key := distKey{scope: scope, postcodeArea: postcodeArea.String, fuelType: fuelType}
+		if _, ok := distMap[key]; !ok {
+			var pcArea *string
+			if postcodeArea.Valid {
+				s := postcodeArea.String
+				pcArea = &s
+			}
+			distMap[key] = &models.Distribution{
+				Scope:        scope,
+				PostcodeArea: pcArea,
+				FuelType:     fuelType,
+				Buckets:      make(map[int]int),
+			}
+		}
+		distMap[key].Buckets[priceBucket] = sampleSize
+	}
+
+	keys := make([]distKey, 0, len(distMap))
+	for k := range distMap {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		if keys[i].scope != keys[j].scope {
+			return keys[i].scope < keys[j].scope
+		}
+		if keys[i].postcodeArea != keys[j].postcodeArea {
+			return keys[i].postcodeArea < keys[j].postcodeArea
+		}
+		return keys[i].fuelType < keys[j].fuelType
+	})
+
+	distributionResults := make([]models.Distribution, 0, len(distMap))
+	for _, k := range keys {
+		distributionResults = append(distributionResults, *distMap[k])
+	}
+
+	return &models.DistributionStatistics{
+		Distribution: distributionResults,
+		LastUpdated:  &now,
 	}, nil
 }

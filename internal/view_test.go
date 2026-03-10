@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rm-hull/fuel-prices-api/internal/metrics"
 	"github.com/rm-hull/fuel-prices-api/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -151,4 +153,136 @@ func TestFuelPriceSnapshotStatsView(t *testing.T) {
 		}
 	}
 	assert.True(t, foundOXE10)
+}
+
+func TestFuelPriceDistributionStatsView(t *testing.T) {
+	repo := setupTestDB(t)
+	sqliteRepo := repo.(*sqliteRepository)
+	db := sqliteRepo.db
+
+	now := time.Now().UTC().Truncate(time.Second)
+
+	stations := []models.PetrolFillingStation{
+		{NodeId: "L1", Location: models.Location{Postcode: "LS1 1AA"}},
+		{NodeId: "L2", Location: models.Location{Postcode: "LS2 1BB"}},
+		{NodeId: "M1", Location: models.Location{Postcode: "M1 1AA"}},
+	}
+	_, _, err := repo.InsertPFS(stations)
+	require.NoError(t, err)
+
+	prices := []models.ForecourtPrices{
+		{
+			NodeId: "L1",
+			FuelPrices: []models.FuelPrice{
+				{FuelType: "E10", Price: 140.0, PriceLastUpdated: now},
+			},
+		},
+		{
+			NodeId: "L2",
+			FuelPrices: []models.FuelPrice{
+				{FuelType: "E10", Price: 141.0, PriceLastUpdated: now}, // Bucket 140
+			},
+		},
+		{
+			NodeId: "M1",
+			FuelPrices: []models.FuelPrice{
+				{FuelType: "E10", Price: 144.0, PriceLastUpdated: now}, // Bucket 144
+			},
+		},
+	}
+	_, _, err = repo.InsertPrices(prices)
+	require.NoError(t, err)
+
+	type DistributionRow struct {
+		Scope        string
+		PostcodeArea sql.NullString
+		FuelType     string
+		PriceBucket  int
+		SampleSize   int
+	}
+
+	rows, err := db.Query("SELECT scope, postcode_area, fuel_type, price_bucket, sample_size FROM fuel_price_distribution_stats")
+	require.NoError(t, err)
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	var results []DistributionRow
+	for rows.Next() {
+		var r DistributionRow
+		err := rows.Scan(&r.Scope, &r.PostcodeArea, &r.FuelType, &r.PriceBucket, &r.SampleSize)
+		require.NoError(t, err)
+		results = append(results, r)
+	}
+
+	// National E10:
+	// 140.0 -> bucket 140
+	// 141.0 -> bucket 140
+	// 144.0 -> bucket 144
+	// So bucket 140 should have sample_size 2, bucket 144 should have 1.
+
+	foundNational140 := false
+	foundNational144 := false
+	for _, r := range results {
+		if r.Scope == "National" && r.FuelType == "E10" {
+			if r.PriceBucket == 140 {
+				foundNational140 = true
+				assert.Equal(t, 2, r.SampleSize)
+			}
+			if r.PriceBucket == 144 {
+				foundNational144 = true
+				assert.Equal(t, 1, r.SampleSize)
+			}
+		}
+	}
+	assert.True(t, foundNational140)
+	assert.True(t, foundNational144)
+}
+
+func TestFuelPriceMetricsCollector(t *testing.T) {
+	repo := setupTestDB(t)
+	now := time.Now().UTC().Truncate(time.Second)
+
+	stations := []models.PetrolFillingStation{
+		{NodeId: "L1", Location: models.Location{Postcode: "LS1 1AA"}},
+	}
+	_, _, err := repo.InsertPFS(stations)
+	require.NoError(t, err)
+
+	prices := []models.ForecourtPrices{
+		{
+			NodeId: "L1",
+			FuelPrices: []models.FuelPrice{
+				{FuelType: "E10", Price: 140.0, PriceLastUpdated: now},
+			},
+		},
+	}
+	_, _, err = repo.InsertPrices(prices)
+	require.NoError(t, err)
+
+	registry := prometheus.NewRegistry()
+	metrics.RegisterFuelSnapshotCollector(registry, repo.SnapshotStats)
+	metrics.RegisterFuelDistributionCollector(registry, repo.DistributionStats)
+
+	// Collect metrics
+	metricFamilies, err := registry.Gather()
+	require.NoError(t, err)
+
+	foundDist := false
+	for _, mf := range metricFamilies {
+		if mf.GetName() == "fuel_prices_govuk_api_price_distribution" {
+			foundDist = true
+			assert.NotEmpty(t, mf.GetMetric())
+			metric := mf.GetMetric()[0]
+			assert.Equal(t, 1.0, metric.GetGauge().GetValue())
+
+			labels := make(map[string]string)
+			for _, lp := range metric.GetLabel() {
+				labels[lp.GetName()] = lp.GetValue()
+			}
+			assert.Equal(t, "E10", labels["fuel_type"])
+			assert.Equal(t, "140", labels["price_bucket"])
+		}
+	}
+	assert.True(t, foundDist)
 }
