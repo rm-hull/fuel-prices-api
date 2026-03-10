@@ -77,8 +77,15 @@ func (m *ClientFetchMetrics) RecordHttpCall(start time.Time, method, endpoint st
 }
 
 func (m *ClientFetchMetrics) RecordFetchedItems(path string, count int, dropped int) {
-	if m != nil && count > 0 {
+	if m == nil {
+		return
+	}
+
+	if count > 0 {
 		m.ItemsFetchedTotal.WithLabelValues(path).Add(float64(count))
+	}
+
+	if dropped > 0 {
 		m.ItemsDroppedTotal.WithLabelValues(path).Add(float64(dropped))
 	}
 }
