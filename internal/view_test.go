@@ -261,7 +261,8 @@ func TestFuelPriceMetricsCollector(t *testing.T) {
 	require.NoError(t, err)
 
 	registry := prometheus.NewRegistry()
-	metrics.RegisterFuelStatsCollector(registry, repo.SnapshotStats, repo.DistributionStats)
+	metrics.RegisterFuelSnapshotCollector(registry, repo.SnapshotStats)
+	metrics.RegisterFuelDistributionCollector(registry, repo.DistributionStats)
 
 	// Collect metrics
 	metricFamilies, err := registry.Gather()

@@ -50,7 +50,8 @@ func bootstrap(dbPath string, fullRefresh bool) (internal.FuelPricesClient, inte
 	}
 
 	repo := internal.NewFuelPricesRepository(db, &retailers)
-	metrics.RegisterFuelStatsCollector(prometheus.DefaultRegisterer, repo.SnapshotStats, repo.DistributionStats)
+	metrics.RegisterFuelSnapshotCollector(prometheus.DefaultRegisterer, repo.SnapshotStats)
+	metrics.RegisterFuelDistributionCollector(prometheus.DefaultRegisterer, repo.DistributionStats)
 
 	return client, repo, nil
 }
