@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"log"
+	"sort"
 	"sync"
 	"time"
 
@@ -369,9 +370,23 @@ func (repo *sqliteRepository) distributionQuery() (*models.DistributionStatistic
 		distMap[key].Buckets[priceBucket] = sampleSize
 	}
 
+	keys := make([]distKey, 0, len(distMap))
+	for k := range distMap {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		if keys[i].scope != keys[j].scope {
+			return keys[i].scope < keys[j].scope
+		}
+		if keys[i].postcodeArea != keys[j].postcodeArea {
+			return keys[i].postcodeArea < keys[j].postcodeArea
+		}
+		return keys[i].fuelType < keys[j].fuelType
+	})
+
 	distributionResults := make([]models.Distribution, 0, len(distMap))
-	for _, d := range distMap {
-		distributionResults = append(distributionResults, *d)
+	for _, k := range keys {
+		distributionResults = append(distributionResults, *distMap[k])
 	}
 
 	return &models.DistributionStatistics{
