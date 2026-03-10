@@ -54,7 +54,9 @@ func (c *fuelPricesGaugeCollector) Collect(ch chan<- prometheus.Metric) {
 			postcodeArea = *d.PostcodeArea
 		}
 
-		ch <- prometheus.MustNewConstMetric(c.distDesc, prometheus.GaugeValue, float64(d.SampleSize), postcodeArea, d.FuelType, strconv.Itoa(d.PriceBucket))
+		for bucket, count := range d.Buckets {
+			ch <- prometheus.MustNewConstMetric(c.distDesc, prometheus.GaugeValue, float64(count), postcodeArea, d.FuelType, strconv.Itoa(bucket))
+		}
 	}
 }
 

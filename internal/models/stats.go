@@ -14,11 +14,10 @@ type Snapshot struct {
 }
 
 type Distribution struct {
-	Scope        string  `json:"scope"`
-	PostcodeArea *string `json:"postcode_area,omitempty"`
-	FuelType     string  `json:"fuel_type"`
-	PriceBucket  int     `json:"price_bucket"`
-	SampleSize   int     `json:"sample_size"`
+	Scope        string      `json:"scope"`
+	PostcodeArea *string     `json:"postcode_area,omitempty"`
+	FuelType     string      `json:"fuel_type"`
+	Buckets      map[int]int `json:"buckets"`
 }
 
 type SnapshotStatistics struct {
@@ -28,6 +27,6 @@ type SnapshotStatistics struct {
 }
 
 type SnapshotResponse struct {
-	SnapshotStatistics 
-	Attribution        []string `json:"attribution"`
+	SnapshotStatistics
+	Attribution []string `json:"attribution"`
 }

@@ -319,17 +319,44 @@ func (repo *sqliteRepository) snapshotQuery() (*models.SnapshotStatistics, error
 		}
 	}()
 
-	distributionResults := make([]models.Distribution, 0, 100)
+	type distKey struct {
+		scope        string
+		postcodeArea string
+		fuelType     string
+	}
+
+	distMap := make(map[distKey]*models.Distribution)
 	for distributionRows.Next() {
-		var distribution models.Distribution
+		var scope, fuelType string
+		var postcodeArea sql.NullString
+		var priceBucket, sampleSize int
+
 		if err := distributionRows.Scan(
-			&distribution.Scope, &distribution.PostcodeArea, &distribution.FuelType,
-			&distribution.PriceBucket, &distribution.SampleSize,
+			&scope, &postcodeArea, &fuelType, &priceBucket, &sampleSize,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan distribution row: %w", err)
 		}
 
-		distributionResults = append(distributionResults, distribution)
+		key := distKey{scope: scope, postcodeArea: postcodeArea.String, fuelType: fuelType}
+		if _, ok := distMap[key]; !ok {
+			var pcArea *string
+			if postcodeArea.Valid {
+				s := postcodeArea.String
+				pcArea = &s
+			}
+			distMap[key] = &models.Distribution{
+				Scope:        scope,
+				PostcodeArea: pcArea,
+				FuelType:     fuelType,
+				Buckets:      make(map[int]int),
+			}
+		}
+		distMap[key].Buckets[priceBucket] = sampleSize
+	}
+
+	distributionResults := make([]models.Distribution, 0, len(distMap))
+	for _, d := range distMap {
+		distributionResults = append(distributionResults, *d)
 	}
 
 	return &models.SnapshotStatistics{
