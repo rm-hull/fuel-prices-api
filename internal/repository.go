@@ -28,6 +28,9 @@ var searchPricesSQL string
 //go:embed sql/snapshot_stats.sql
 var snapshotStatsSQL string
 
+//go:embed sql/distribution_stats.sql
+var distributionStatsSQL string
+
 type FuelPricesRepository interface {
 	InsertPFS(batch []models.PetrolFillingStation) (int, int, error)
 	InsertPrices(batch []models.ForecourtPrices) (int, int, error)
@@ -280,32 +283,58 @@ func (repo *sqliteRepository) SnapshotStats() (*models.SnapshotStatistics, error
 }
 
 func (repo *sqliteRepository) snapshotQuery() (*models.SnapshotStatistics, error) {
-	rows, err := repo.db.Query(snapshotStatsSQL)
+	now := time.Now()
+
+	snapshotRows, err := repo.db.Query(snapshotStatsSQL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute snapshot stats: %w", err)
 	}
 	defer func() {
-		if closeErr := rows.Close(); closeErr != nil {
-			log.Printf("failed to close rows: %v", closeErr)
+		if closeErr := snapshotRows.Close(); closeErr != nil {
+			log.Printf("failed to close snapshot rows: %v", closeErr)
 		}
 	}()
 
-	results := make([]models.Snapshot, 0, 50)
-	for rows.Next() {
+	snapshotResults := make([]models.Snapshot, 0, 50)
+	for snapshotRows.Next() {
 		var snapshot models.Snapshot
-		if err := rows.Scan(
+		if err := snapshotRows.Scan(
 			&snapshot.Scope, &snapshot.PostcodeArea, &snapshot.FuelType,
 			&snapshot.LowestPrice, &snapshot.AveragePrice, &snapshot.HighestPrice,
 			&snapshot.StandardDeviation, &snapshot.SampleSize,
 		); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
+			return nil, fmt.Errorf("failed to scan snapshot row: %w", err)
 		}
 
-		results = append(results, snapshot)
+		snapshotResults = append(snapshotResults, snapshot)
+	}
+
+	distributionRows, err := repo.db.Query(distributionStatsSQL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute distribution stats: %w", err)
+	}
+	defer func() {
+		if closeErr := distributionRows.Close(); closeErr != nil {
+			log.Printf("failed to close distribution rows: %v", closeErr)
+		}
+	}()
+
+	distributionResults := make([]models.Distribution, 0, 100)
+	for distributionRows.Next() {
+		var distribution models.Distribution
+		if err := distributionRows.Scan(
+			&distribution.Scope, &distribution.PostcodeArea, &distribution.FuelType,
+			&distribution.PriceBucket, &distribution.SampleSize,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan distribution row: %w", err)
+		}
+
+		distributionResults = append(distributionResults, distribution)
 	}
 
 	return &models.SnapshotStatistics{
-		Snapshot:    results,
-		LastUpdated: new(time.Now()),
+		Snapshot:     snapshotResults,
+		Distribution: distributionResults,
+		LastUpdated:  &now,
 	}, nil
 }

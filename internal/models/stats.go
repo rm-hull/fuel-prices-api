@@ -13,9 +13,18 @@ type Snapshot struct {
 	SampleSize        int     `json:"sample_size"`
 }
 
+type Distribution struct {
+	Scope        string  `json:"scope"`
+	PostcodeArea *string `json:"postcode_area,omitempty"`
+	FuelType     string  `json:"fuel_type"`
+	PriceBucket  int     `json:"price_bucket"`
+	SampleSize   int     `json:"sample_size"`
+}
+
 type SnapshotStatistics struct {
-	Snapshot    []Snapshot `json:"snapshot,omitempty"`
-	LastUpdated *time.Time `json:"last_updated,omitempty"`
+	Snapshot     []Snapshot     `json:"snapshot,omitempty"`
+	Distribution []Distribution `json:"distribution,omitempty"`
+	LastUpdated  *time.Time     `json:"last_updated,omitempty"`
 }
 
 type SnapshotResponse struct {
