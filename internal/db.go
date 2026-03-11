@@ -13,11 +13,22 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+type migrateLogger struct{}
+
+func (l *migrateLogger) Printf(format string, v ...interface{}) {
+	log.Printf("migration: "+format, v...)
+}
+
+func (l *migrateLogger) Verbose() bool {
+	return true
+}
+
 func Migrate(migrationsPath, dbPath string) error {
 	m, err := migrate.New("file://"+migrationsPath, "sqlite3://"+dbPath)
 	if err != nil {
 		return err
 	}
+	m.Log = &migrateLogger{}
 	defer func() {
 		if sErr, dErr := m.Close(); sErr != nil || dErr != nil {
 			log.Printf("migration close error: source=%v, db=%v", sErr, dErr)
