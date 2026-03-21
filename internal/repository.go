@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/kofalt/go-memoize"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rm-hull/fuel-prices-api/internal/metrics"
 	"github.com/rm-hull/fuel-prices-api/internal/models"
 	"github.com/tavsec/gin-healthcheck/checks"
 )
@@ -46,6 +48,7 @@ type sqliteRepository struct {
 	db        *sql.DB
 	retailers *models.Retailers
 	cache     *memoize.Memoizer
+	metrics   *metrics.SqlMetrics
 }
 
 func NewFuelPricesRepository(db *sql.DB, retailers *models.Retailers) FuelPricesRepository {
@@ -53,6 +56,7 @@ func NewFuelPricesRepository(db *sql.DB, retailers *models.Retailers) FuelPrices
 		db:        db,
 		retailers: retailers,
 		cache:     memoize.NewMemoizer(60*time.Minute, 10*time.Minute),
+		metrics:   metrics.NewSqlMetrics(prometheus.DefaultRegisterer),
 	}
 }
 
@@ -69,6 +73,7 @@ func (repo *sqliteRepository) InsertPFS(batch []models.PetrolFillingStation) (in
 		return 0, 0, nil
 	}
 
+	defer repo.metrics.Record(time.Now(), "insertPFS")
 	tx, err := repo.db.Begin()
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to begin transaction: %w", err)
@@ -112,6 +117,7 @@ func (repo *sqliteRepository) InsertPrices(batch []models.ForecourtPrices) (int,
 		return 0, 0, nil
 	}
 
+	defer repo.metrics.Record(time.Now(), "insertPrices")
 	tx, err := repo.db.Begin()
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to begin transaction: %w", err)
@@ -193,6 +199,7 @@ func (repo *sqliteRepository) Search(boundingBox []float64, perTypeLimit int) ([
 func (repo *sqliteRepository) fetchPfs(boundingBox []float64, results *[]models.SearchResult, err *error, done func()) {
 	defer done()
 
+	defer repo.metrics.Record(time.Now(), "fetchPFS")
 	rows, queryErr := repo.db.Query(searchPfsSQL, boundingBox[1], boundingBox[3], boundingBox[0], boundingBox[2])
 	if queryErr != nil {
 		*err = fmt.Errorf("failed to execute search query: %w", queryErr)
@@ -244,6 +251,7 @@ func (repo *sqliteRepository) fetchPfs(boundingBox []float64, results *[]models.
 func (repo *sqliteRepository) fetchPrices(boundingBox []float64, results *map[string]map[string][]models.PriceInfo, err *error, perTypeLimit int, done func()) {
 	defer done()
 
+	defer repo.metrics.Record(time.Now(), "fetchPrices")
 	rows, queryErr := repo.db.Query(searchPricesSQL, boundingBox[1], boundingBox[3], boundingBox[0], boundingBox[2], perTypeLimit)
 	if queryErr != nil {
 		*err = fmt.Errorf("failed to execute search query: %w", queryErr)
@@ -292,6 +300,7 @@ func (repo *sqliteRepository) DistributionStats() (*models.DistributionStatistic
 func (repo *sqliteRepository) snapshotQuery() (*models.SnapshotStatistics, error) {
 	now := time.Now()
 
+	defer repo.metrics.Record(now, "statistics")
 	snapshotRows, err := repo.db.Query(snapshotStatsSQL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute snapshot stats: %w", err)
@@ -325,6 +334,7 @@ func (repo *sqliteRepository) snapshotQuery() (*models.SnapshotStatistics, error
 func (repo *sqliteRepository) distributionQuery() (*models.DistributionStatistics, error) {
 	now := time.Now()
 
+	defer repo.metrics.Record(now, "distribution")
 	distributionRows, err := repo.db.Query(distributionStatsSQL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute distribution stats: %w", err)

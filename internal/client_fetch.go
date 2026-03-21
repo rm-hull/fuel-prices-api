@@ -14,13 +14,10 @@ import (
 	// neturl "net/url"
 	"time"
 
-	jsoniter "github.com/json-iterator/go"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rm-hull/fuel-prices-api/internal/metrics"
 	"github.com/rm-hull/fuel-prices-api/internal/models"
 )
-
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // HTTPStatusError is returned when the remote server responds with a non-2xx status.
 type HTTPStatusError struct {

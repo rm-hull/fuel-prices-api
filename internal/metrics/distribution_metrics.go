@@ -44,7 +44,5 @@ func RegisterFuelDistributionCollector(reg prometheus.Registerer, distFn func() 
 		distFunc: distFn,
 	}
 
-	if reg != nil {
-		reg.MustRegister(&collector)
-	}
+	RegisterOrPanic(reg, &collector)
 }
