@@ -73,6 +73,7 @@ func (repo *sqliteRepository) InsertPFS(batch []models.PetrolFillingStation) (in
 		return 0, 0, nil
 	}
 
+	defer repo.metrics.Record(time.Now(), "insertPFS")
 	tx, err := repo.db.Begin()
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to begin transaction: %w", err)
@@ -85,7 +86,6 @@ func (repo *sqliteRepository) InsertPFS(batch []models.PetrolFillingStation) (in
 		}
 	}()
 
-	defer repo.metrics.Record(time.Now(), "insertPFS")
 	stmt, err := tx.Prepare(insertPfsSQL)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to prepare statement: %w", err)
@@ -117,6 +117,7 @@ func (repo *sqliteRepository) InsertPrices(batch []models.ForecourtPrices) (int,
 		return 0, 0, nil
 	}
 
+	defer repo.metrics.Record(time.Now(), "insertPrices")
 	tx, err := repo.db.Begin()
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to begin transaction: %w", err)
@@ -129,7 +130,6 @@ func (repo *sqliteRepository) InsertPrices(batch []models.ForecourtPrices) (int,
 		}
 	}()
 
-	defer repo.metrics.Record(time.Now(), "insertPrices")
 	stmt, err := tx.Prepare(insertPricesSQL)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to prepare statement: %w", err)
