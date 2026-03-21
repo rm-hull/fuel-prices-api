@@ -51,12 +51,12 @@ func NewClientFetchMetrics(reg prometheus.Registerer) *ClientFetchMetrics {
 		),
 	}
 
-	if reg != nil {
-		reg.MustRegister(m.ResponseLatency)
-		reg.MustRegister(m.ResponseStatusCode)
-		reg.MustRegister(m.ItemsFetchedTotal)
-		reg.MustRegister(m.ItemsDroppedTotal)
-	}
+	RegisterOrPanic(reg,
+		m.ResponseLatency,
+		m.ResponseStatusCode,
+		m.ItemsFetchedTotal,
+		m.ItemsDroppedTotal,
+	)
 
 	return m
 }

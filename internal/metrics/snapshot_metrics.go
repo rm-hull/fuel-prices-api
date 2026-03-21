@@ -57,7 +57,5 @@ func RegisterFuelSnapshotCollector(reg prometheus.Registerer, snapshotFn func() 
 		snapshotFunc: snapshotFn,
 	}
 
-	if reg != nil {
-		reg.MustRegister(&collector)
-	}
+	RegisterOrPanic(reg, &collector)
 }

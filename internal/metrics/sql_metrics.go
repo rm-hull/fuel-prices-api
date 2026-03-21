@@ -23,9 +23,7 @@ func NewSqlMetrics(reg prometheus.Registerer) *SqlMetrics {
 		),
 	}
 
-	if reg != nil {
-		reg.MustRegister(m.QueryLatency)
-	}
+	RegisterOrPanic(reg, m.QueryLatency)
 
 	return m
 }
