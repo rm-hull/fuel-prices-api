@@ -39,7 +39,7 @@ func (e *HTTPStatusError) Error() string {
 	body = strings.ReplaceAll(body, "\t", "\\t")
 
 	// truncate very large bodies to avoid excessive log sizes
-	const maxBody = 1000
+	const maxBody = 100_000
 	if len(body) > maxBody {
 		body = body[:maxBody] + "...(truncated)"
 	}
