@@ -320,6 +320,7 @@ func (mgr *fuelPricesManager) post(url, contentType string, data any) (io.ReadCl
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Accept", "application/json")
 
 	resp, err := mgr.client.Do(req)
 	mgr.metrics.RecordHttpCall(start, "POST", url, resp, err)
