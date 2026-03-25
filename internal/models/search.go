@@ -31,4 +31,8 @@ type SearchStatistics struct {
 	BrandDistribution map[string]int            `json:"brand_distribution,omitempty"`
 }
 
-
+type PriceHistoryResponse struct {
+	Results     []FuelPrice `json:"results"`
+	Attribution []string    `json:"attribution"`
+	LastUpdated *time.Time  `json:"last_updated,omitempty"`
+}

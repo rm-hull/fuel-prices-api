@@ -34,10 +34,14 @@ var snapshotStatsSQL string
 //go:embed sql/distribution_stats.sql
 var distributionStatsSQL string
 
+//go:embed sql/price_history.sql
+var priceHistorySQL string
+
 type FuelPricesRepository interface {
 	InsertPFS(batch []models.PetrolFillingStation) (int, int, error)
 	InsertPrices(batch []models.ForecourtPrices) (int, int, error)
 	Search(boundingBox []float64, perTypeLimit int) ([]models.SearchResult, error)
+	PriceHistory(nodeId, fuelType string) ([]models.FuelPrice, error)
 	SnapshotStats() (*models.SnapshotStatistics, error)
 	DistributionStats() (*models.DistributionStatistics, error)
 	Close() error
@@ -403,4 +407,33 @@ func (repo *sqliteRepository) distributionQuery() (*models.DistributionStatistic
 		Distribution: distributionResults,
 		LastUpdated:  &now,
 	}, nil
+}
+
+func (repo *sqliteRepository) PriceHistory(nodeId, fuelType string) ([]models.FuelPrice, error) {
+
+	defer repo.metrics.Record(time.Now(), "priceHistory")
+	rows, err := repo.db.Query(priceHistorySQL, nodeId, fuelType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute price history query: %w", err)
+	}
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			log.Printf("failed to close rows: %v", closeErr)
+		}
+	}()
+
+	results := make([]models.FuelPrice, 0, 30)
+	for rows.Next() {
+		var result models.FuelPrice
+		if err := rows.Scan(&result.FuelType, &result.Price, &result.PriceLastUpdated, &result.PriceChangeEffectiveTimestamp); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		results = append(results, result)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over rows: %w", err)
+	}
+
+	return results, nil
 }
