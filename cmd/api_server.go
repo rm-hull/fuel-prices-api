@@ -63,8 +63,17 @@ func ApiServer(dbPath string, port int, fullRefresh, debug bool) error {
 		return fmt.Errorf("failed to initialize healthcheck: %v", err)
 	}
 
+	r.NoRoute(func(c *gin.Context) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Route not found"})
+	})
+
+	r.NoMethod(func(c *gin.Context) {
+		c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "Method not allowed"})
+	})
+
 	v1 := r.Group("/v1/fuel-prices")
 	v1.GET("/search", routes.Search(repo, client))
+	v1.GET("/history/:node_id/:fuel_type", routes.PriceHistory(repo, client))
 	v1.GET("/stats/snapshot", routes.SnapshotStats(repo))
 	v1.GET("/stats/distribution", routes.DistributionStats(repo))
 
