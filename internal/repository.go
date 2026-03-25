@@ -37,11 +37,15 @@ var distributionStatsSQL string
 //go:embed sql/price_history.sql
 var priceHistorySQL string
 
+//go:embed sql/fuel_types.sql
+var fuelTypesSQL string
+
 type FuelPricesRepository interface {
 	InsertPFS(batch []models.PetrolFillingStation) (int, int, error)
 	InsertPrices(batch []models.ForecourtPrices) (int, int, error)
 	Search(boundingBox []float64, perTypeLimit int) ([]models.SearchResult, error)
 	PriceHistory(nodeId, fuelType string) ([]models.FuelPrice, error)
+	FuelTypes() (map[string]struct{}, error)
 	SnapshotStats() (*models.SnapshotStatistics, error)
 	DistributionStats() (*models.DistributionStatistics, error)
 	Close() error
@@ -433,6 +437,38 @@ func (repo *sqliteRepository) PriceHistory(nodeId, fuelType string) ([]models.Fu
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating over rows: %w", err)
+	}
+
+	return results, nil
+}
+
+func (repo *sqliteRepository) FuelTypes() (map[string]struct{}, error) {
+	result, err, _ := memoize.Call(repo.cache, "fuel_types", repo.fuelTypesQuery)
+	return result, err
+}
+
+func (repo *sqliteRepository) fuelTypesQuery() (map[string]struct{}, error) {
+	now := time.Now()
+
+	defer repo.metrics.Record(now, "fuel_types")
+	rows, err := repo.db.Query(fuelTypesSQL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute fuel-types query: %w", err)
+	}
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			log.Printf("failed to close snapshot rows: %v", closeErr)
+		}
+	}()
+
+	results := make(map[string]struct{}, 0)
+	for rows.Next() {
+		var fuelType string
+		if err := rows.Scan(&fuelType); err != nil {
+			return nil, fmt.Errorf("failed to scan snapshot row: %w", err)
+		}
+
+		results[fuelType] = struct{}{}
 	}
 
 	return results, nil

@@ -1,0 +1,1 @@
+SELECT DISTINCT fuel_type FROM fuel_prices;
