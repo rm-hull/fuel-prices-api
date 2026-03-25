@@ -39,7 +39,7 @@ func (e *HTTPStatusError) Error() string {
 	body = strings.ReplaceAll(body, "\t", "\\t")
 
 	// truncate very large bodies to avoid excessive log sizes
-	const maxBody = 100_000
+	const maxBody = 1000
 	if len(body) > maxBody {
 		body = body[:maxBody] + "...(truncated)"
 	}
@@ -165,6 +165,12 @@ func (mgr *fuelPricesManager) tokenRefresh() error {
 	url := fmt.Sprintf("%s/oauth/regenerate_access_token", mgr.baseUrl)
 	body, err := mgr.post(url, "application/json", tokenReq)
 	if err != nil {
+		var stErr *HTTPStatusError
+		if errors.As(err, &stErr) && stErr.StatusCode == http.StatusInternalServerError {
+			log.Printf("Failed to regenerate access token: %v", err)
+			log.Printf("Trying to recover from token refresh error reponse (HTTP %d)...", stErr.StatusCode)
+			return mgr.authenticate()
+		}
 		return err
 	}
 	defer func() {
@@ -221,7 +227,7 @@ func fetchBatched[T any](
 	callback BatchCallback[T],
 ) (int, int, error) {
 	if err := mgr.checkTokenExpiry(); err != nil {
-		return 0, 0, fmt.Errorf("failed to refresh token: %w", err)
+		return 0, 0, err
 	}
 
 	batchNo := 1
@@ -241,7 +247,7 @@ func fetchBatched[T any](
 		body, err := mgr.get(url)
 		if err != nil {
 			var stErr *HTTPStatusError
-			if errors.As(err, &stErr) && stErr.StatusCode == 404 {
+			if errors.As(err, &stErr) && stErr.StatusCode == http.StatusNotFound {
 				log.Printf("No more batches available for %s, stopping at batch %d", path, batchNo-1)
 				break
 			}
