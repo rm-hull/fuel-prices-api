@@ -167,7 +167,7 @@ func (mgr *fuelPricesManager) tokenRefresh() error {
 	if err != nil {
 		var stErr *HTTPStatusError
 		if errors.As(err, &stErr) && stErr.StatusCode == http.StatusInternalServerError {
-			log.Printf("Failed to regenerate access token: %v", err)
+			log.Printf("Failed to refresh access token: %v", err)
 			log.Printf("Trying to recover from token refresh error response (HTTP %d)...", stErr.StatusCode)
 			return mgr.authenticate()
 		}
