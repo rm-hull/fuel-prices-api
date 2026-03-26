@@ -450,7 +450,7 @@ func (repo *sqliteRepository) FuelTypes() (map[string]struct{}, error) {
 func (repo *sqliteRepository) fuelTypesQuery() (map[string]struct{}, error) {
 	now := time.Now()
 
-	defer repo.metrics.Record(now, "fuel_types")
+	defer repo.metrics.Record(now, "fuelTypes")
 	rows, err := repo.db.Query(fuelTypesSQL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute fuel-types query: %w", err)
