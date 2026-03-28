@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	neturl "net/url"
+	"os"
 	"strconv"
 	"strings"
 
@@ -73,8 +74,13 @@ type fuelPricesManager struct {
 }
 
 func NewFuelPricesClient(clientId, clientSecret string, fullRefresh bool) (FuelPricesClient, error) {
+	baseUrl := "https://www.fuel-finder.service.gov.uk/api/v1"
+	if envBaseUrl := os.Getenv("FUEL_PRICES_API_BASE_URL"); envBaseUrl != "" {
+		baseUrl = envBaseUrl
+	}
+
 	mgr := &fuelPricesManager{
-		baseUrl: "https://www.fuel-finder.service.gov.uk/api/v1",
+		baseUrl: baseUrl,
 		timeTracker: timeTracker{
 			started: time.Now(),
 		},
