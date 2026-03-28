@@ -1,11 +1,9 @@
 package internal
 
 import (
-	stdjson "encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
@@ -59,7 +57,7 @@ func TestAuthenticate_Success(t *testing.T) {
 		assert.Equal(t, "POST", r.Method)
 
 		var req models.AuthRequest
-		err := stdjson.NewDecoder(r.Body).Decode(&req)
+		err := json.NewDecoder(r.Body).Decode(&req)
 		require.NoError(t, err)
 		assert.Equal(t, "test-client-id", req.ClientId)
 
@@ -72,7 +70,8 @@ func TestAuthenticate_Success(t *testing.T) {
 			},
 		}
 		w.WriteHeader(http.StatusOK)
-		stdjson.NewEncoder(w).Encode(resp)
+		err = json.NewEncoder(w).Encode(resp)
+		require.NoError(t, err)
 	}))
 	defer server.Close()
 
@@ -92,7 +91,8 @@ func TestAuthenticate_Failure(t *testing.T) {
 			Message: "invalid credentials",
 		}
 		w.WriteHeader(http.StatusOK)
-		stdjson.NewEncoder(w).Encode(resp)
+		err := json.NewEncoder(w).Encode(resp)
+		require.NoError(t, err)
 	}))
 	defer server.Close()
 
@@ -106,7 +106,8 @@ func TestAuthenticate_Failure(t *testing.T) {
 func TestAuthenticate_HttpError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("unauthorized"))
+		_, err := w.Write([]byte("unauthorized"))
+		require.NoError(t, err)
 	}))
 	defer server.Close()
 
@@ -124,7 +125,8 @@ func TestTokenRefresh_Success(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/oauth/regenerate_access_token", r.URL.Path)
 		var req models.TokenRefreshRequest
-		_ = stdjson.NewDecoder(r.Body).Decode(&req)
+		err := json.NewDecoder(r.Body).Decode(&req)
+		require.NoError(t, err)
 		assert.Equal(t, "test-refresh-token", req.RefreshToken)
 
 		resp := models.AuthResponse{
@@ -135,7 +137,7 @@ func TestTokenRefresh_Success(t *testing.T) {
 			},
 		}
 		w.WriteHeader(http.StatusOK)
-		_ = stdjson.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -151,7 +153,7 @@ func TestTokenRefresh_Failure(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := models.AuthResponse{Success: false, Message: "failed"}
 		w.WriteHeader(http.StatusOK)
-		_ = stdjson.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -171,9 +173,9 @@ func TestTokenRefresh_RetryOnServerError(t *testing.T) {
 		if r.URL.Path == "/oauth/generate_access_token" {
 			resp := models.AuthResponse{
 				Success: true,
-				Data: models.TokenData{AccessToken: "recovered-token", ExpiresIn: 3600},
+				Data:    models.TokenData{AccessToken: "recovered-token", ExpiresIn: 3600},
 			}
-			_ = stdjson.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 			return
 		}
 	}))
@@ -193,7 +195,7 @@ func TestCheckTokenExpiry(t *testing.T) {
 			Success: true,
 			Data:    models.TokenData{AccessToken: "refreshed", ExpiresIn: 3600},
 		}
-		_ = stdjson.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -223,7 +225,7 @@ func TestGetFuelPrices_Success(t *testing.T) {
 			resp := []models.ForecourtPrices{
 				{NodeId: "1", TradingName: "Station 1"},
 			}
-			_ = stdjson.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -252,7 +254,7 @@ func TestGetFillingStations_Success(t *testing.T) {
 			resp := []models.PetrolFillingStation{
 				{NodeId: "1", BrandName: "Brand 1"},
 			}
-			_ = stdjson.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -299,7 +301,7 @@ func TestLastUpdated(t *testing.T) {
 
 func TestFetchBatched_CallbackError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_ = stdjson.NewEncoder(w).Encode([]models.ForecourtPrices{{NodeId: "1"}})
+		_ = json.NewEncoder(w).Encode([]models.ForecourtPrices{{NodeId: "1"}})
 	}))
 	defer server.Close()
 
@@ -323,7 +325,8 @@ func TestGetFuelPrices_InvalidUrl(t *testing.T) {
 
 func TestGetFuelPrices_DecodeError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("invalid json"))
+		_, err := w.Write([]byte("invalid json"))
+		require.NoError(t, err)
 	}))
 	defer server.Close()
 
@@ -365,12 +368,11 @@ func TestNewFuelPricesClient(t *testing.T) {
 			Success: true,
 			Data:    models.TokenData{AccessToken: "token"},
 		}
-		_ = stdjson.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
-	os.Setenv("FUEL_PRICES_API_BASE_URL", server.URL)
-	defer os.Unsetenv("FUEL_PRICES_API_BASE_URL")
+	t.Setenv("FUEL_PRICES_API_BASE_URL", server.URL)
 
 	client, err := NewFuelPricesClient("id", "secret", false)
 	require.NoError(t, err)
