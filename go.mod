@@ -90,7 +90,7 @@ require (
 	github.com/aurowora/compress v0.0.0-20230724224640-6512772d482f
 	github.com/cockroachdb/errors v1.12.0
 	github.com/gin-contrib/cors v1.7.6
-	github.com/gin-contrib/pprof v1.5.3
+	github.com/gin-contrib/pprof v1.5.4
 	github.com/kofalt/go-memoize v0.0.0-20240506050413-9e5eb99a0f2a
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
