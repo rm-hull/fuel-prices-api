@@ -25,23 +25,7 @@ import (
 
 func ApiServer(dbPath string, port int, fullRefresh, debug bool) error {
 
-	environment := "development"
-	if os.Getenv("ENVIRONMENT") != "" {
-		environment = os.Getenv("ENVIRONMENT")
-	}
-	err := sentry.Init(sentry.ClientOptions{
-		Dsn:         os.Getenv("SENTRY_DSN"),
-		Debug:       debug,
-		Release:     versioninfo.Revision[:7],
-		Environment: environment,
-		EnableLogs:  true,
-	})
-	if err != nil {
-		return fmt.Errorf("sentry initialization failed: %w", err)
-	}
-	defer sentry.Flush(2 * time.Second)
-
-	client, repo, err := bootstrap(dbPath, fullRefresh)
+	client, repo, err := bootstrap(dbPath, fullRefresh, debug)
 	if err != nil {
 		return err
 	}
