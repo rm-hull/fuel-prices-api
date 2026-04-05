@@ -4,13 +4,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"time"
 
 	"github.com/Depado/ginprom"
 	"github.com/aurowora/compress"
-	"github.com/earthboundkid/versioninfo/v2"
-	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"

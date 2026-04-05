@@ -7,7 +7,7 @@ import (
 
 func Import(dbPath string) error {
 
-	client, repo, err := bootstrap(dbPath, true)
+	client, repo, err := bootstrap(dbPath, true, true)
 	if err != nil {
 		return err
 	}
