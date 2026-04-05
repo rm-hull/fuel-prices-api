@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
+	"github.com/earthboundkid/versioninfo/v2"
+	"github.com/getsentry/sentry-go"
 	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rm-hull/godx"
@@ -17,10 +20,26 @@ import (
 // bootstrap initialises shared resources used by both the API server and import
 // commands. It returns the authenticated client, a repository, and an error
 // if something failed during startup.
-func bootstrap(dbPath string, fullRefresh bool) (internal.FuelPricesClient, internal.FuelPricesRepository, error) {
+func bootstrap(dbPath string, fullRefresh, debug bool) (internal.FuelPricesClient, internal.FuelPricesRepository, error) {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
+
+	environment := "development"
+	if os.Getenv("ENVIRONMENT") != "" {
+		environment = os.Getenv("ENVIRONMENT")
+	}
+	err := sentry.Init(sentry.ClientOptions{
+		Dsn:         os.Getenv("SENTRY_DSN"),
+		Debug:       debug,
+		Release:     versioninfo.Revision[:7],
+		Environment: environment,
+		EnableLogs:  true,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("sentry initialization failed: %w", err)
+	}
+	defer sentry.Flush(2 * time.Second)
 
 	godx.GitVersion()
 	godx.EnvironmentVars()

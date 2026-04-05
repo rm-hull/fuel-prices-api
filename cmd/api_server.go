@@ -21,7 +21,7 @@ import (
 
 func ApiServer(dbPath string, port int, fullRefresh, debug bool) error {
 
-	client, repo, err := bootstrap(dbPath, fullRefresh)
+	client, repo, err := bootstrap(dbPath, fullRefresh, debug)
 	if err != nil {
 		return err
 	}
