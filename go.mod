@@ -97,5 +97,5 @@ require (
 	github.com/rm-hull/godx v0.2.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/cobra v1.10.2
-	github.com/tavsec/gin-healthcheck v1.7.14
+	github.com/tavsec/gin-healthcheck v1.7.15
 )
