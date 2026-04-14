@@ -61,20 +61,25 @@ func TestFuelPriceSnapshotStatsView(t *testing.T) {
 		{
 			NodeId: "O1",
 			FuelPrices: []models.FuelPrice{
-				// Price from yesterday, should be included now
+				// Price from yesterday, should be included
 				{FuelType: "E10", Price: 146.0, PriceLastUpdated: yesterday},
+			},
+		},
+		{
+			NodeId: "L1",
+			FuelPrices: []models.FuelPrice{
+				// Very old price, should be filtered out
+				{FuelType: "DIESEL", Price: 100.0, PriceLastUpdated: now.AddDate(0, 0, -15)},
 			},
 		},
 	}
 	_, _, err = repo.InsertPrices(prices)
 	require.NoError(t, err)
 
-	// Expected stats (including Oxford):
+	// Expected stats (including Oxford but excluding L1 DIESEL):
 	// National E10: (140.0 + 144.0 + 150.0 + 146.0) / 4 = 145.0
 	// National B7: 150.0
-	// Area LS E10: (140.0 + 144.0) / 2 = 142.0
-	// Area M E10: 150.0
-	// Area OX E10: 146.0
+	// National DIESEL: should be empty or not present
 
 	type StatsRow struct {
 		Scope        string
@@ -121,6 +126,11 @@ func TestFuelPriceSnapshotStatsView(t *testing.T) {
 		}
 	}
 	assert.True(t, foundNationalE10)
+
+	// Verify DIESEL is NOT present
+	for _, r := range results {
+		assert.NotEqual(t, "DIESEL", r.FuelType, "DIESEL should have been filtered out")
+	}
 
 	// Verify LS E10
 	foundLSE10 := false
