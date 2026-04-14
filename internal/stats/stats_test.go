@@ -10,8 +10,8 @@ import (
 
 func TestDerive_StalePriceFiltering(t *testing.T) {
 	now := time.Now().UTC()
-	staleDate := now.AddDate(0, 0, -15) // 15 days ago
-	freshDate := now.AddDate(0, 0, -13) // 13 days ago
+	staleDate := now.Add(-stalenessThreshold - time.Hour)
+	freshDate := now.Add(-stalenessThreshold + time.Hour)
 
 	results := []models.SearchResult{
 		{
