@@ -8,7 +8,7 @@ import (
 	"github.com/rm-hull/fuel-prices-api/internal/models"
 )
 
-const STALENESS_THRESHOLD = 14 * 24 * time.Hour
+const stalenessThreshold = 14 * 24 * time.Hour
 
 func Derive(results []models.SearchResult, bucketSize int) *models.SearchStatistics {
 	if bucketSize <= 0 {
@@ -39,7 +39,7 @@ func Derive(results []models.SearchResult, bucketSize int) *models.SearchStatist
 
 			// Use the most recent price (first in slice)
 			priceInfo := priceInfos[0]
-			if now.Sub(priceInfo.UpdatedOn) > STALENESS_THRESHOLD {
+			if now.Sub(priceInfo.UpdatedOn) > stalenessThreshold {
 				continue
 			}
 
