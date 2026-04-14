@@ -3,9 +3,12 @@ package stats
 import (
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/rm-hull/fuel-prices-api/internal/models"
 )
+
+const stalenessThreshold = 14 * 24 * time.Hour
 
 func Derive(results []models.SearchResult, bucketSize int) *models.SearchStatistics {
 	if bucketSize <= 0 {
@@ -25,14 +28,23 @@ func Derive(results []models.SearchResult, bucketSize int) *models.SearchStatist
 	fuelTypePrices := make(map[string][]float64)
 	fuelTypeStations := make(map[string]map[float64][]string) // price -> station names
 
+	now := time.Now().UTC()
+
 	for _, result := range results {
+		hasFreshPrice := false
 		for fuelType, priceInfos := range result.FuelPrices {
 			if len(priceInfos) == 0 {
 				continue
 			}
 
 			// Use the most recent price (first in slice)
-			price := priceInfos[0].Price
+			priceInfo := priceInfos[0]
+			if now.Sub(priceInfo.UpdatedOn) > stalenessThreshold {
+				continue
+			}
+
+			hasFreshPrice = true
+			price := priceInfo.Price
 			fuelTypePrices[fuelType] = append(fuelTypePrices[fuelType], price)
 
 			if fuelTypeStations[fuelType] == nil {
@@ -41,8 +53,8 @@ func Derive(results []models.SearchResult, bucketSize int) *models.SearchStatist
 			fuelTypeStations[fuelType][price] = append(fuelTypeStations[fuelType][price], result.NodeId)
 		}
 
-		// Brand distribution - count results by retailer
-		if result.Retailer != nil {
+		// Brand distribution - count results by retailer, but only if they have at least one fresh price
+		if hasFreshPrice && result.Retailer != nil {
 			stats.BrandDistribution[result.Retailer.Name]++
 		}
 	}
